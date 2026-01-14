@@ -1,4 +1,4 @@
-# Sonora Frontend
+# Sonora Frontend - Para Coolify
 services:
   frontend:
     build:
@@ -13,10 +13,17 @@ services:
         - NEXT_PUBLIC_TUGUIA_ANON_KEY=${NEXT_PUBLIC_TUGUIA_ANON_KEY}
         - NEXT_PUBLIC_PIPECAT_URL=${NEXT_PUBLIC_PIPECAT_URL}
         - PIPECAT_CHAT_URL=${PIPECAT_CHAT_URL}
-    ports:
-      - "3000:3000"
+    expose:
+      - "3000"
     environment:
       - NEXT_PUBLIC_PIPECAT_URL=${NEXT_PUBLIC_PIPECAT_URL}
       - PIPECAT_CHAT_URL=${PIPECAT_CHAT_URL}
       - OPENAI_API_KEY=${OPENAI_API_KEY}
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.frontend.rule=Host(`sonora.1411sas.com`)
+      - traefik.http.routers.frontend.entrypoints=https
+      - traefik.http.routers.frontend.tls=true
+      - traefik.http.routers.frontend.tls.certresolver=letsencrypt
+      - traefik.http.services.frontend.loadbalancer.server.port=3000
     restart: unless-stopped
