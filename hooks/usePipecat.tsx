@@ -20,8 +20,7 @@ export interface PipecatCallbacks {
 }
 
 export function usePipecat(
-  serverUrl: string = process.env.NEXT_PUBLIC_PIPECAT_URL ||
-    "http://localhost:7860",
+  serverUrl: string = "https://sonora-api.1411sas.com",
   callbacks?: PipecatCallbacks
 ) {
   const clientRef = useRef<PipecatClient | null>(null);
