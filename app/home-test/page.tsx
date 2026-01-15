@@ -16,7 +16,7 @@ import {
   Bot,
   ArrowLeft,
 } from "lucide-react";
-import { usePipecat } from "@/hooks/usePipecat";
+import { usePipecatCloud as usePipecat } from "@/hooks/usePipecatCloud";
 import { useVoiceMessages } from "@/hooks/useVoiceMessages";
 import { useMessages } from "@/hooks/useMessages";
 import type { TranscriptData, BotLLMTextData } from "@pipecat-ai/client-js";
@@ -239,7 +239,7 @@ export default function ChatPage() {
     sendImageMessage,
     sendMultimodalMessage,
     sendFileMessage,
-  } = usePipecat(undefined, pipecatCallbacks);
+  } = usePipecat(pipecatCallbacks);
 
   // Safety valve: Ensure isConnecting is disabled when connected
   useEffect(() => {
