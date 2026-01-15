@@ -14,6 +14,11 @@ export async function POST(request: NextRequest) {
             // Sin body está bien
         }
 
+        // Log para depuración
+        console.log("PIPECAT_CLOUD_API_KEY:", PIPECAT_API_KEY ? `${PIPECAT_API_KEY.substring(0, 10)}...` : "NOT SET");
+        console.log("AGENT_NAME:", AGENT_NAME);
+        console.log("Calling:", `${PIPECAT_CLOUD_API}/${AGENT_NAME}/start`);
+
         // Llamar a Pipecat Cloud para iniciar sesión
         const response = await fetch(`${PIPECAT_CLOUD_API}/${AGENT_NAME}/start`, {
             method: "POST",
