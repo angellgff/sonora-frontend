@@ -1,128 +1,178 @@
-# CerebroSonora - Frontend
+# Sonora Frontend
 
-Interfaz web del asistente de voz y texto para el Ecosistema Red Futura.
+Frontend Next.js para el asistente de voz Sonora. Desplegado en Coolify.
 
-## 🚀 Tecnologías
+## Ecosistema Sonora
 
-- **Next.js 16** - Framework de React con App Router
-- **TypeScript** - Tipado estático
-- **Tailwind CSS** - Estilos
-- **Supabase** - Auth y almacenamiento
-- **Pipecat Client** - Conexión WebRTC para voz
+Este frontend es parte de un sistema de 3 repositorios:
 
-## ✨ Características
+| Repositorio | Descripción | Despliegue |
+|-------------|-------------|------------|
+| **sonora-frontend** (este) | Frontend Next.js | Coolify |
+| [sonora-test](https://github.com/Lifimastar/sonora-test) | Bot de voz Pipecat | Pipecat Cloud |
+| [sonora-chat](https://github.com/Lifimastar/sonora-chat) | API de chat | Coolify |
 
-- ✅ Chat de voz en tiempo real
-- ✅ Chat de texto sin necesidad de llamada
-- ✅ Subida de imágenes (con preview)
-- ✅ Subida de archivos de texto (.txt, .md, .json)
-- ✅ Indicador "Pensando..." mientras el bot responde
-- ✅ Alertas de error visibles
-- ✅ Historial de conversaciones persistente
-- ✅ Autenticación con Supabase
-- ✅ Modo oscuro
+**Flujo:** Usuario → sonora-frontend → Pipecat Cloud → sonora-test → Supabase
 
-## 📦 Instalación
+## Tecnologías
+
+- **Framework:** Next.js 16 (App Router)
+- **Lenguaje:** TypeScript
+- **Estilos:** TailwindCSS
+- **Estado:** React Hooks
+- **Voz:** @pipecat-ai/client-js + @pipecat-ai/daily-transport
+- **DB:** Supabase
+
+## Estructura Importante
+
+```
+sonora-frontend/
+├── app/
+│   ├── api/
+│   │   └── voice/
+│   │       └── start/route.ts    # Inicia sesión con Pipecat Cloud
+│   ├── home-test/
+│   │   └── page.tsx              # Página principal de voz
+│   └── _helpers/                 # Funciones auxiliares
+├── hooks/
+│   ├── usePipecatCloud.tsx       # ✅ USAR EN PRODUCCIÓN (DailyTransport)
+│   ├── usePipecat.tsx            # ⚠️ SOLO DESARROLLO LOCAL (SmallWebRTC)
+│   ├── useVoiceMessages.tsx      # Manejo de transcripciones
+│   └── useMessages.tsx           # Manejo de mensajes
+├── components/                   # Componentes UI
+└── .env                          # Variables de entorno
+```
+
+## Configuración
+
+### Variables de Entorno (.env)
+
+```env
+# Supabase
+NEXT_PUBLIC_SUPABASE_URL=https://xxx.supabase.co
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=xxx
+NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY=xxx
+
+# Tu Guía (otro proyecto)
+NEXT_PUBLIC_TUGUIA_URL=https://xxx.supabase.co
+NEXT_PUBLIC_TUGUIA_ANON_KEY=xxx
+
+# Pipecat Cloud (PRODUCCIÓN)
+PIPECAT_CLOUD_API_KEY=pk_xxx          # API key pública
+PIPECAT_AGENT_NAME=sonora-voice       # Nombre del agente
+
+# URLs
+NEXT_PUBLIC_PIPECAT_URL=http://localhost:7860  # Solo desarrollo local
+PIPECAT_CHAT_URL=http://host.docker.internal:7861/api/chat
+```
+
+## Desarrollo Local
 
 ```bash
 # Instalar dependencias
-npm install
+npm install --legacy-peer-deps
 
-# Configurar variables de entorno
-cp .env.example .env.local
-# Edita .env.local con tus credenciales
+# Iniciar servidor de desarrollo
+npm run dev  # Puerto 3001
 ```
 
-## 🔧 Ejecución
-
-### Desarrollo Local
-
-```bash
-npm run dev
-```
-
-La aplicación estará en [http://localhost:3000](http://localhost:3000)
-
-### Producción
-
-```bash
-npm run build
-npm start
-```
-
-## 🐳 Docker
-
-```bash
-# Construir y ejecutar
-docker-compose up --build
-
-# Solo construir
-docker-compose build
-
-# Ejecutar en background
-docker-compose up -d
-```
-
-## 🔑 Variables de Entorno
-
-```env
-# Conexión con Backend
-NEXT_PUBLIC_PIPECAT_URL=http://localhost:7860      # Servidor de voz
-PIPECAT_CHAT_URL=http://localhost:7861/api/chat    # API de texto
-
-# Para Docker usar:
-# NEXT_PUBLIC_PIPECAT_URL=http://host.docker.internal:7860
-# PIPECAT_CHAT_URL=http://host.docker.internal:7861/api/chat
-
-# Supabase (sonoraDB)
-NEXT_PUBLIC_SUPABASE_URL=...
-NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=...
-NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY=...
-
-# Supabase (Tu Guía)
-NEXT_PUBLIC_TUGUIA_URL=...
-NEXT_PUBLIC_TUGUIA_ANON_KEY=...
-```
-
-## 📁 Estructura
+## Flujo de Conexión de Voz
 
 ```
-CerebroSonora/
-├── app/
-│   ├── home-test/        # Página principal del chat
-│   │   ├── page.tsx      # Componente principal
-│   │   └── components/   # ChatArea, ChatControls, etc.
-│   ├── api/              # API Routes (proxy)
-│   │   └── chat/         # Proxy para backend
-│   ├── auth/             # Páginas de autenticación
-│   └── _helpers/         # Utilidades
-├── hooks/
-│   ├── usePipecat.tsx    # Hook para conexión de voz
-│   ├── useTextChat.ts    # Hook para chat de texto
-│   └── useVoiceMessages.tsx # Gestión de mensajes
-├── Dockerfile
-└── docker-compose.yml
+1. Usuario → Clic "Iniciar llamada"
+                    │
+2. page.tsx → usePipecatCloud.connect(conversationId, userId)
+                    │
+3. Hook → fetch("/api/voice/start")
+                    │
+4. API Route → POST https://api.pipecat.daily.co/v1/public/sonora-voice/start
+                    │
+5. Retorna → { dailyRoom, dailyToken, sessionId }
+                    │
+6. Hook → DailyTransport.connect({ url: dailyRoom, token: dailyToken })
+                    │
+7. Callback → onBotConnected se ejecuta
+                    │
+8. Hook → sendClientMessage("action", { action: "set_conversation_id", ... })
+                    │
+9. Bot → Recibe conversation_id y saluda
 ```
 
-## 🎯 Uso
+## Hooks de Voz
 
-### Chat de Voz
-1. Ir a `/home-test`
-2. Click en "Llamar"
-3. Hablar con el bot
+### usePipecatCloud.tsx (✅ PRODUCCIÓN)
 
-### Chat de Texto (sin llamada)
-1. Ir a `/home-test`
-2. Escribir mensaje y presionar Enter
-3. El indicador "Pensando..." aparece mientras responde
+```typescript
+const {
+  connect,           // Conectar al bot
+  disconnect,        // Desconectar
+  sendTextMessage,   // Enviar mensaje de texto
+  isConnected,       // Estado de conexión
+  isBotSpeaking,     // Bot está hablando
+  error,             // Error actual
+} = usePipecatCloud(callbacks);
+```
 
-### Subir Archivos
-- **Imágenes**: Click en 📎 y seleccionar imagen
-- **Archivos de texto**: Click en 📎 y seleccionar .txt/.md/.json
-- Se pueden subir con o sin mensaje de texto
+**Callbacks disponibles:**
+- `onUserTranscript` - Cuando el usuario habla
+- `onBotTranscript` - Cuando el bot responde
+- `onBotStartedSpeaking` - Bot comenzó a hablar
+- `onBotStoppedSpeaking` - Bot dejó de hablar
 
-## 📝 Notas
+### usePipecat.tsx (⚠️ SOLO LOCAL)
 
-- Las imágenes se guardan en Supabase Storage
-- El chat de texto funciona sin necesidad de iniciar una llamada
-- Los errores se muestran como alertas visibles
+Hook antiguo que usa `SmallWebRTCTransport`. Solo funciona cuando el bot corre localmente en `localhost:7860`.
+
+## API Routes
+
+### /api/voice/start
+
+Inicia una sesión con Pipecat Cloud.
+
+**Request:** POST
+```json
+{
+  "conversationId": "uuid",
+  "userId": "uuid"
+}
+```
+
+**Response:**
+```json
+{
+  "url": "https://xxx.daily.co/roomId",
+  "token": "jwt...",
+  "sessionId": "uuid"
+}
+```
+
+## Despliegue
+
+### Coolify (Producción)
+
+1. Push a `main` → Auto-redeploy
+2. Variables de entorno configuradas en Coolify (Runtime)
+3. Dockerfile multi-stage para producción
+
+### Variables en Coolify
+
+| Variable | Buildtime | Runtime |
+|----------|-----------|---------|
+| PIPECAT_CLOUD_API_KEY | ❌ | ✅ |
+| PIPECAT_AGENT_NAME | ❌ | ✅ |
+| NEXT_PUBLIC_* | ✅ | ✅ |
+
+## Problemas Comunes
+
+| Problema | Solución |
+|----------|----------|
+| `npm ERESOLVE` | Usar `--legacy-peer-deps` |
+| `zod/v4 not found` | Agregar `zod: "^3.25.64"` a package.json |
+| `401 Unauthorized` | Verificar/regenerar PIPECAT_CLOUD_API_KEY |
+| Bot no saluda | Verificar onBotConnected se ejecuta |
+
+## Notas de Desarrollo
+
+- El hook `usePipecatCloud` tiene un delay de 2.5s antes de enviar `conversation_id`
+- El callback `onBotConnected` se usa en lugar de `onBotReady`
+- Los campos de Pipecat Cloud son `dailyRoom` y `dailyToken` (no `room_url` y `token`)
