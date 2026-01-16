@@ -51,20 +51,27 @@ export function usePipecatCloud(callbacks?: PipecatCloudCallbacks) {
                     setIsConnecting(false);
                     setError(null);
                     console.log("✅ Conectado a Pipecat Cloud");
-
-                    // Enviar conversation_id después de conectar
+                },
+                onBotReady: () => {
+                    console.log("🤖 Bot listo para recibir mensajes");
+                    // Enviar conversation_id cuando el bot está listo
                     if (clientRef.current && pendingConversationIdRef.current) {
-                        setTimeout(() => {
-                            if (clientRef.current) {
-                                clientRef.current.sendClientMessage("action", {
-                                    action: "set_conversation_id",
-                                    arguments: {
-                                        conversation_id: pendingConversationIdRef.current,
-                                        user_id: pendingUserIdRef.current,
-                                    },
-                                });
+                        setTimeout(async () => {
+                            try {
+                                if (clientRef.current) {
+                                    clientRef.current.sendClientMessage("action", {
+                                        action: "set_conversation_id",
+                                        arguments: {
+                                            conversation_id: pendingConversationIdRef.current,
+                                            user_id: pendingUserIdRef.current,
+                                        },
+                                    });
+                                    console.log("✅ Mensaje set_conversation_id enviado");
+                                }
+                            } catch (error) {
+                                console.error("❌ Error enviando conversation_id:", error);
                             }
-                        }, 500);
+                        }, 1000); // 1 segundo de delay
                     }
                 },
                 onDisconnected: () => {
