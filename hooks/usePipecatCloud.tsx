@@ -237,9 +237,22 @@ export function usePipecatCloud(callbacks?: PipecatCloudCallbacks) {
         }
     }, [isConnected]);
 
-    const sendFileMessage = useCallback(async (_text: string, _content: string, _fileName: string) => {
-        console.warn("sendFileMessage no disponible en modo Cloud");
-    }, []);
+    const sendFileMessage = useCallback(async (text: string, content: string, fileName: string) => {
+        if (!clientRef.current || !isConnected) {
+            console.error("No conectado a Pipecat Cloud");
+            return;
+        }
+        try {
+            await clientRef.current.sendClientMessage("user_file_message", {
+                text,
+                file_content: content,
+                file_name: fileName,
+            });
+            console.log("✅ Archivo enviado:", { fileName, contentLength: content.length });
+        } catch (err) {
+            console.error("Error enviando archivo:", err);
+        }
+    }, [isConnected]);
 
     return {
         connect,

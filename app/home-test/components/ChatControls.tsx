@@ -162,11 +162,11 @@ export function ChatControls({
                     <Button
                         variant="ghost"
                         size="icon"
-                        className={`shrink-0 h-10 w-10 md:h-12 md:w-12 rounded-xl transition-all duration-300 ${(!message.trim() && selectedFiles.length === 0) || isRecording
+                        className={`shrink-0 h-10 w-10 md:h-12 md:w-12 rounded-xl transition-all duration-300 ${(!message.trim() && selectedFiles.length === 0 && !selectedTextFile) || isRecording
                             ? "bg-white/5 text-slate-600 cursor-not-allowed"
                             : "bg-[#00E599] text-slate-900 hover:bg-[#00E599]/90 hover:scale-105 shadow-[0_0_15px_rgba(0,229,153,0.3)]"
                             }`}
-                        disabled={(!message.trim() && selectedFiles.length === 0) || isRecording}
+                        disabled={(!message.trim() && selectedFiles.length === 0 && !selectedTextFile) || isRecording}
                         onClick={handleSend}
                     >
                         <Send className="w-5 h-5" />
