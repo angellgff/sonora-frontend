@@ -44,11 +44,14 @@ export async function POST(request: NextRequest) {
 
         const data = await response.json();
 
-        // Retornar URL y token de Daily
+        // Log para ver la estructura de la respuesta
+        console.log("Pipecat Cloud response:", JSON.stringify(data, null, 2));
+
+        // Retornar URL y token de Daily (verificar nombres de campos)
         return NextResponse.json({
-            url: data.room_url,
-            token: data.token,
-            sessionId: data.session_id,
+            url: data.room_url || data.roomUrl || data.url,
+            token: data.token || data.meetingToken,
+            sessionId: data.session_id || data.sessionId,
         });
 
     } catch (error) {
