@@ -47,11 +47,11 @@ export async function POST(request: NextRequest) {
         // Log para ver la estructura de la respuesta
         console.log("Pipecat Cloud response:", JSON.stringify(data, null, 2));
 
-        // Retornar URL y token de Daily (verificar nombres de campos)
+        // Retornar URL y token de Daily
         return NextResponse.json({
-            url: data.room_url || data.roomUrl || data.url,
-            token: data.token || data.meetingToken,
-            sessionId: data.session_id || data.sessionId,
+            url: data.dailyRoom,
+            token: data.dailyToken,
+            sessionId: data.sessionId,
         });
 
     } catch (error) {
