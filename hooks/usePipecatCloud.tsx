@@ -220,9 +220,22 @@ export function usePipecatCloud(callbacks?: PipecatCloudCallbacks) {
         console.warn("sendImageMessage no disponible en modo Cloud");
     }, []);
 
-    const sendMultimodalMessage = useCallback(async (_text: string, _imageUrls: string[]) => {
-        console.warn("sendMultimodalMessage no disponible en modo Cloud");
-    }, []);
+    const sendMultimodalMessage = useCallback(async (text: string, imageUrls: string[]) => {
+        if (!clientRef.current || !isConnected) {
+            console.error("No conectado a Pipecat Cloud");
+            return;
+        }
+        try {
+            // Usar guión bajo porque el bot busca "user_multimodal_message"
+            await clientRef.current.sendClientMessage("user_multimodal_message", {
+                text,
+                image_urls: imageUrls,
+            });
+            console.log("✅ Mensaje multimodal enviado:", { text, imageUrls });
+        } catch (err) {
+            console.error("Error enviando mensaje multimodal:", err);
+        }
+    }, [isConnected]);
 
     const sendFileMessage = useCallback(async (_text: string, _content: string, _fileName: string) => {
         console.warn("sendFileMessage no disponible en modo Cloud");
