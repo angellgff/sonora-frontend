@@ -52,9 +52,9 @@ export function usePipecatCloud(callbacks?: PipecatCloudCallbacks) {
                     setError(null);
                     console.log("✅ Conectado a Pipecat Cloud");
                 },
-                onBotReady: () => {
-                    console.log("🤖 Bot listo para recibir mensajes");
-                    // Enviar conversation_id cuando el bot está listo
+                onBotConnected: () => {
+                    console.log("🤖 Bot conectado - enviando conversation_id");
+                    // Enviar conversation_id cuando el bot se conecta
                     if (clientRef.current && pendingConversationIdRef.current) {
                         setTimeout(async () => {
                             try {
@@ -71,7 +71,7 @@ export function usePipecatCloud(callbacks?: PipecatCloudCallbacks) {
                             } catch (error) {
                                 console.error("❌ Error enviando conversation_id:", error);
                             }
-                        }, 1000); // 1 segundo de delay
+                        }, 2500); // 2.5 segundos de delay (igual que el hook original)
                     }
                 },
                 onDisconnected: () => {
