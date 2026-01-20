@@ -18,6 +18,7 @@ export interface PipecatCloudCallbacks {
 export function usePipecatCloud(callbacks?: PipecatCloudCallbacks) {
     const clientRef = useRef<PipecatClient | null>(null);
     const audioElementRef = useRef<HTMLAudioElement | null>(null);
+    const localVideoStreamRef = useRef<MediaStream | null>(null);
 
     const pendingConversationIdRef = useRef<string | null>(null);
     const pendingUserIdRef = useRef<string | null>(null);
@@ -27,6 +28,8 @@ export function usePipecatCloud(callbacks?: PipecatCloudCallbacks) {
     const [error, setError] = useState<string | null>(null);
     const [isInitialized, setIsInitialized] = useState(false);
     const [isBotSpeaking, setIsBotSpeaking] = useState(false);
+    const [localVideoStream, setLocalVideoStream] = useState<MediaStream | null>(null);
+    const [isCameraOn, setIsCameraOn] = useState(false);
 
     // Inicialización del cliente
     useEffect(() => {
@@ -118,6 +121,11 @@ export function usePipecatCloud(callbacks?: PipecatCloudCallbacks) {
 
         return () => {
             pipecatClient.disconnect();
+            // Limpiar video stream si existe
+            if (localVideoStreamRef.current) {
+                localVideoStreamRef.current.getTracks().forEach(track => track.stop());
+                localVideoStreamRef.current = null;
+            }
         };
     }, []);
 
@@ -207,14 +215,42 @@ export function usePipecatCloud(callbacks?: PipecatCloudCallbacks) {
         [isConnected]
     );
 
-    // Funciones placeholder para compatibilidad con la interfaz existente
-    // Estas funciones no están disponibles con DailyTransport en producción
-    const localVideoStream = null;
-    const isCameraOn = false;
-
+    // Función para encender/apagar cámara
     const toggleCamera = useCallback(async () => {
-        console.warn("toggleCamera no disponible en modo Cloud");
-    }, []);
+        if (!clientRef.current) return;
+
+        const newState = !isCameraOn;
+        setIsCameraOn(newState);
+
+        try {
+            // Habilitar/deshabilitar cámara en el cliente Pipecat
+            if (isConnected && clientRef.current.enableCam) {
+                await clientRef.current.enableCam(newState);
+            }
+
+            if (newState) {
+                // Encender cámara
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: true
+                });
+                setLocalVideoStream(stream);
+                localVideoStreamRef.current = stream;
+                console.log("📷 Cámara encendida");
+            } else {
+                // Apagar cámara
+                setLocalVideoStream(null);
+                if (localVideoStreamRef.current) {
+                    localVideoStreamRef.current.getTracks().forEach(t => t.stop());
+                    localVideoStreamRef.current = null;
+                }
+                console.log("📷 Cámara apagada");
+            }
+        } catch (err) {
+            console.error("Error toggling camera:", err);
+            // Revertir estado si falla
+            setIsCameraOn(!newState);
+        }
+    }, [isCameraOn, isConnected]);
 
     const sendImageMessage = useCallback(async (_imageUrl: string) => {
         console.warn("sendImageMessage no disponible en modo Cloud");
