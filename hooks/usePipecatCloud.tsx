@@ -47,7 +47,7 @@ export function usePipecatCloud(callbacks?: PipecatCloudCallbacks) {
         const pipecatClient = new PipecatClient({
             transport,
             enableMic: true,
-            enableCam: false,
+            enableCam: true,  // Habilitar cámara para que DailyTransport soporte video
             callbacks: {
                 onConnected: () => {
                     setIsConnected(true);
