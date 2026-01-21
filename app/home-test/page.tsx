@@ -422,7 +422,9 @@ export default function ChatPage() {
 
       // PRIORIDAD 3: Solo texto (en llamada)
       if (hasMessage && sendTextMessage) {
-        sendTextMessage(message.trim());
+        const trimmedMessage = message.trim();
+        addUserMessage(trimmedMessage, true); // Mostrar en el chat local
+        sendTextMessage(trimmedMessage); // Enviar al bot
         setMessage("");
       }
       return;
