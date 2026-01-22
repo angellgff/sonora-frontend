@@ -3,7 +3,7 @@
 import { useState, useCallback } from "react";
 
 interface UseTextChatReturn {
-    sendTextMessage: (message: string, conversationId: string, userId: string | null, files?: File[], imageUrls?: string[]) => Promise<void>;
+    sendTextMessage: (message: string, conversationId: string, userId: string | null, files?: File[], imageUrls?: string[], cameraImage?: string) => Promise<void>;
     isLoading: boolean;
     streamingContent: string;
     error: string | null;
@@ -19,7 +19,7 @@ export function useTextChat(
     const [error, setError] = useState<string | null>(null);
 
     const sendTextMessage = useCallback(
-        async (message: string, conversationId: string, userId: string | null, files?: File[], imageUrls?: string[]) => {
+        async (message: string, conversationId: string, userId: string | null, files?: File[], imageUrls?: string[], cameraImage?: string) => {
             if ((!message.trim() && !(files && files.length > 0)) || !conversationId) return;
 
             setIsLoading(true);
@@ -54,6 +54,7 @@ export function useTextChat(
                             message,
                             conversationId,
                             userId,
+                            cameraImage, // Imagen de cámara en base64
                         }),
                     });
                 }

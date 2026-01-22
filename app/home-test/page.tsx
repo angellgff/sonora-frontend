@@ -477,8 +477,24 @@ export default function ChatPage() {
       addUserMessageFinal(displayMessage, imageUrls.length > 0 ? imageUrls : undefined);
       const messageToSend = message.trim();
       setMessage("");
-      // Enviar al API
-      await sendTextChatMessage(messageToSend, targetConversationId!, userId, allFiles.length > 0 ? allFiles : undefined, imageUrls.length > 0 ? imageUrls : undefined);
+
+      // Capturar frame de cámara si está disponible (para ver_camara)
+      let cameraImage: string | undefined;
+      if (localVideoStream) {
+        try {
+          const { captureFrameFromStream } = await import("@/app/_helpers/captureFrame");
+          const frame = await captureFrameFromStream(localVideoStream);
+          if (frame) {
+            cameraImage = frame;
+            console.log("📷 Frame de cámara capturado para chat de texto");
+          }
+        } catch (err) {
+          console.error("Error capturando frame de cámara:", err);
+        }
+      }
+
+      // Enviar al API con imagen de cámara si disponible
+      await sendTextChatMessage(messageToSend, targetConversationId!, userId, allFiles.length > 0 ? allFiles : undefined, imageUrls.length > 0 ? imageUrls : undefined, cameraImage);
     }
   };
 

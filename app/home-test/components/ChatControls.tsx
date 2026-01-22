@@ -149,12 +149,12 @@ export function ChatControls({
                     {/* Input de texto */}
                     <div className="flex-1 relative">
                         <Input
-                            placeholder={selectedFiles.length > 0 ? "Añade una descripción..." : (isConnected ? "Escribe un mensaje..." : "Escribe para chatear...")}
+                            placeholder={isConnected ? "🎤 Usa tu voz para hablar..." : (selectedFiles.length > 0 ? "Añade una descripción..." : "Escribe para chatear...")}
                             value={message}
                             onChange={(e) => onMessageChange(e.target.value)}
                             onKeyDown={handleKeyDownWrapper}
                             className="h-10 md:h-12 text-sm md:text-base bg-black/20 border-white/10 focus:border-[#00E599]/50 focus:ring-[#00E599]/20 text-slate-200 placeholder:text-slate-500 rounded-xl"
-                            disabled={isRecording}
+                            disabled={isRecording || isConnected}
                         />
                     </div>
 

@@ -5,7 +5,7 @@ const PIPECAT_CHAT_URL = process.env.PIPECAT_CHAT_URL || "http://localhost:7861/
 export async function POST(req: NextRequest) {
     try {
         const body = await req.json();
-        const { message, conversationId, userId } = body;
+        const { message, conversationId, userId, cameraImage } = body;
 
         if (!message || !conversationId) {
             return NextResponse.json({ error: "Faltan campos requeridos" }, { status: 400 });
@@ -18,6 +18,7 @@ export async function POST(req: NextRequest) {
                 message,
                 conversation_id: conversationId,
                 user_id: userId,
+                camera_image: cameraImage, // Imagen de cámara para ver_camara
             }),
         });
 
