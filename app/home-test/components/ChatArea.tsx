@@ -35,7 +35,7 @@ export function ChatArea({
     }, [messages]);
 
     return (
-        <div className="flex-1 overflow-y-auto p-3 md:p-4 space-y-4 md:space-y-6 custom-scrollbar">
+        <div className="flex-1 min-h-0 overflow-y-auto p-3 md:p-4 space-y-4 md:space-y-6 custom-scrollbar">
             {/* Estado vacío: sin conversación seleccionada */}
             {!hasSelectedConversation && messages.length === 0 && (
                 <div className="flex flex-col items-center justify-center h-full text-center p-8">

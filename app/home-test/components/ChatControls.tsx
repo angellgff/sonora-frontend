@@ -74,7 +74,7 @@ export function ChatControls({
     };
 
     return (
-        <div className="border-t border-white/5 bg-white/5 backdrop-blur-md p-3 md:p-4 safe-area-bottom">
+        <div className="shrink-0 sticky bottom-0 z-20 border-t border-white/5 bg-[#050B14]/95 backdrop-blur-md p-3 md:p-4 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
             <div className="max-w-4xl mx-auto">
                 {/* Previsualización de imágenes seleccionadas */}
                 {selectedFiles.length > 0 && (

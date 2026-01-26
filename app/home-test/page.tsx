@@ -516,7 +516,7 @@ export default function ChatPage() {
   // const handleImageUpload = ...
 
   return (
-    <div className="flex h-screen bg-[#050B14] overflow-hidden relative selection:bg-[#00E599] selection:text-black font-sans text-slate-200">
+    <div className="flex h-[100dvh] bg-[#050B14] overflow-hidden relative selection:bg-[#00E599] selection:text-black font-sans text-slate-200">
 
       {/* Background Ambience */}
       <div className="fixed top-[-20%] left-[-10%] w-[50%] h-[50%] bg-[#00E599]/5 rounded-full blur-[120px] pointer-events-none z-0"></div>
@@ -537,8 +537,8 @@ export default function ChatPage() {
 
       {/* Área principal del chat */}
       <main className="flex-1 flex flex-col w-full relative z-10 bg-transparent">
-        {/* Header */}
-        <header className="h-14 md:h-16 border-b border-white/5 bg-white/5 backdrop-blur-md px-3 md:px-4 flex items-center justify-between shadow-sm">
+        {/* Header - Sticky para móvil */}
+        <header className="sticky top-0 z-20 shrink-0 h-14 md:h-16 border-b border-white/5 bg-[#050B14]/95 backdrop-blur-md px-3 md:px-4 flex items-center justify-between shadow-sm">
           <div className="flex items-center gap-2 md:gap-3 flex-1 min-w-0">
             <Button
               variant="ghost"
