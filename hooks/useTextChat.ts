@@ -33,7 +33,11 @@ export function useTextChat(
                 // Si hay archivos, usar el endpoint de upload
                 if (files && files.length > 0) {
                     const formData = new FormData();
-                    formData.append("file", files[0]); // Por ahora solo 1 archivo
+                    // Enviar todos los archivos
+                    files.forEach(file => {
+                        formData.append("files", file);
+                    });
+
                     formData.append("conversation_id", conversationId);
                     if (userId) formData.append("user_id", userId);
                     formData.append("message", message);

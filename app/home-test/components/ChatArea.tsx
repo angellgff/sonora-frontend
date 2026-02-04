@@ -21,6 +21,14 @@ interface ChatAreaProps {
     isTyping?: boolean;
 }
 
+// Helper para limpiar contenido visualmente
+const cleanContent = (text: string) => {
+    if (text.includes("[CONTENIDO DE ARCHIVOS]:")) {
+        return text.split("[CONTENIDO DE ARCHIVOS]:")[0].trim();
+    }
+    return text;
+};
+
 export function ChatArea({
     messages,
     isLoading,
@@ -96,7 +104,7 @@ export function ChatArea({
                             {msg.type === "audio" ? (
                                 <div className="space-y-2">
                                     <p className={`text-sm md:text-base leading-relaxed wrap-break-word ${msg.role === 'user' ? 'font-medium' : 'font-light'}`}>
-                                        {msg.content}
+                                        {cleanContent(msg.content)}
                                     </p>
 
                                     {/* Renderizar Imagenes si existen */}
@@ -131,7 +139,7 @@ export function ChatArea({
                             ) : (
                                 <div>
                                     <p className={`text-sm md:text-base leading-relaxed wrap-break-word ${msg.role === 'user' ? 'font-medium' : 'font-light'}`}>
-                                        {msg.content}
+                                        {cleanContent(msg.content)}
                                     </p>
 
                                     {/* Renderizar Imagenes si existen (Text Msg) */}
