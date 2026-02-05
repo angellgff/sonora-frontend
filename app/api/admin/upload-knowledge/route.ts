@@ -6,9 +6,25 @@ import mammoth from "mammoth";
 import { getEncoding } from "js-tiktoken";
 
 function getSupabaseAdmin() {
+    // Intentar obtener la key de servicio de varias formas segura (sin prefijo) o legacy (con prefijo)
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY;
+
+    if (!serviceRoleKey) {
+        throw new Error("❌ CONFIG ERROR: Falta SUPABASE_SERVICE_ROLE_KEY en variables de entorno.");
+    }
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {
+        throw new Error("❌ CONFIG ERROR: Falta NEXT_PUBLIC_SUPABASE_URL en variables de entorno.");
+    }
+
     return createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY!
+        process.env.NEXT_PUBLIC_SUPABASE_URL,
+        serviceRoleKey,
+        {
+            auth: {
+                persistSession: false,
+                autoRefreshToken: false,
+            }
+        }
     );
 }
 
@@ -44,15 +60,18 @@ const chunkText = (text: string, chunkSize = CHUNK_SIZE, overlap = CHUNK_OVERLAP
 };
 
 export async function POST(req: NextRequest) {
-    const supabaseAdmin = getSupabaseAdmin();
-    const openai = getOpenAI();
-
     // Variables para el rollback
     let storagePath: string | null = null;
     let chunksInserted: string[] = [];
     let fileName: string = "";
 
+    // Cliente Supabase (puede ser null si falla inicialización)
+    let supabaseAdmin: any = null;
+
     try {
+        supabaseAdmin = getSupabaseAdmin();
+        const openai = getOpenAI();
+
         const formData = await req.formData();
         const file = formData.get("file") as File;
 
@@ -168,7 +187,7 @@ export async function POST(req: NextRequest) {
         console.error("❌ Error processing file:", error);
 
         // Rollback: si se insertaron chunks pero algo falló después
-        if (chunksInserted.length > 0 && fileName) {
+        if (supabaseAdmin && chunksInserted.length > 0 && fileName) {
             try {
                 await supabaseAdmin
                     .from("knowledge_base")
@@ -181,7 +200,7 @@ export async function POST(req: NextRequest) {
         }
 
         // Rollback: si se subió al storage pero algo falló después
-        if (storagePath) {
+        if (supabaseAdmin && storagePath) {
             try {
                 await supabaseAdmin.storage
                     .from('knowledge-files')
