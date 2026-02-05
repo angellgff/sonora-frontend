@@ -84,37 +84,95 @@ export default function KnowledgeDashboard() {
     }
   };
 
-  // Función Subir (La que ya tenías)
+  // Importación dinámica para tokenizador (solo si no se usa arriba)
+  // import { getEncoding } from "js-tiktoken";
+  // OJO: js-tiktoken puede ser pesado en client, pero necesario para split exacto.
+  // Alternativamente, usaremos un split simple por caracteres para el cliente y el backend re-verificará si es necesario
+
+  // Función auxiliar para dividir texto
+  const splitTextIntoChunks = (text: string, chunkSize = 1000) => {
+    const chunks: string[] = [];
+    for (let i = 0; i < text.length; i += chunkSize) {
+      chunks.push(text.slice(i, i + chunkSize));
+    }
+    // Nota: El backend de OpenAI usa tokens, pero dividir por chars (aprox 4 chars = 1 token) es un proxy seguro
+    // 1000 chars ~= 250 tokens. Es seguro.
+    return chunks;
+  };
+
   const handleFileUpload = async (file: File) => {
     setIsUploading(true);
     setUploadStatus({ type: null, message: '' });
-    const formData = new FormData();
-    formData.append("file", file);
+
+    // Resetear stats
+    let totalChunks = 0;
+    let processedChunks = 0;
 
     try {
-      const response = await fetch("/api/admin/upload-knowledge", { method: "POST", body: formData });
+      // PASO 1: Extracción de Texto (Rápido)
+      setUploadStatus({ type: null, message: 'Extrayendo texto del documento...' });
 
-      let data;
-      const responseText = await response.text();
+      const extractForm = new FormData();
+      extractForm.append("file", file);
 
-      try {
-        data = JSON.parse(responseText);
-      } catch (e) {
-        console.error("Non-JSON response:", responseText);
-        throw new Error(`Server Error: ${response.status} ${response.statusText} - ${responseText.slice(0, 50)}...`);
+      const extractRes = await fetch("/api/admin/extract-text", { method: "POST", body: extractForm });
+      const extractData = await extractRes.json();
+
+      if (!extractRes.ok) throw new Error(extractData.error || "Error extrayendo texto");
+
+      const text = extractData.text;
+      if (!text || text.length === 0) throw new Error("Archivo subido pero sin texto legible");
+
+      // PASO 2: Chunking en Cliente
+      setUploadStatus({ type: null, message: 'Dividiendo información...' });
+      const chunks = splitTextIntoChunks(text, 2000); // 2000 caracteres por chunk (~500 tokens)
+      totalChunks = chunks.length;
+
+      // PASO 3: Subida por Lotes (Batch Upload)
+      // Enviaremos lotes de 50 chunks a la vez
+      const BATCH_SIZE = 50;
+
+      for (let i = 0; i < chunks.length; i += BATCH_SIZE) {
+        const batch = chunks.slice(i, i + BATCH_SIZE);
+        const progress = Math.round(((i) / chunks.length) * 100);
+
+        setUploadStatus({
+          type: null,
+          message: `Memorizando parte ${Math.ceil((i + 1) / BATCH_SIZE)} de ${Math.ceil(chunks.length / BATCH_SIZE)} (${progress}%)`
+        });
+
+        const saveBody = {
+          chunks: batch,
+          fileName: file.name,
+          fileType: file.type,
+          storagePath: `${Date.now()}_${file.name}`, // Path simple
+          startIndex: i
+        };
+
+        const saveRes = await fetch("/api/admin/save-chunks", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(saveBody)
+        });
+
+        if (!saveRes.ok) {
+          const errorData = await saveRes.json();
+          throw new Error(`Error en lote ${i}: ${errorData.error}`);
+        }
+
+        processedChunks += batch.length;
       }
 
-      if (!response.ok) throw new Error(data.error || "Error desconocido en el servidor");
-
-      setUploadStatus({ type: 'success', message: `¡Listo! ${data.chunks} fragmentos aprendidos.` });
-      setTimeout(() => { // Cerrar modal y recargar tras éxito
+      setUploadStatus({ type: 'success', message: `¡Éxito! ${processedChunks} fragmentos aprendidos.` });
+      setTimeout(() => {
         setIsUploadModalOpen(false);
         loadFiles();
         setUploadStatus({ type: null, message: '' });
       }, 2000);
 
     } catch (error: any) {
-      setUploadStatus({ type: 'error', message: error.message });
+      console.error(error);
+      setUploadStatus({ type: 'error', message: error.message || "Error desconocido" });
     } finally {
       setIsUploading(false);
     }
