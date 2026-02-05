@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import OpenAI from "openai";
-//const pdf = require("pdf-parse");
+import pdf from "pdf-parse"; // Import estático para prevenir error de test/data en Vercel
 import mammoth from "mammoth";
 import { getEncoding } from "js-tiktoken";
+
+// Configuración para Vercel / Next.js
+export const maxDuration = 60; // 60 segundos (límite Pro, o 10s en Hobby). Aumentar si es posible.
+export const dynamic = 'force-dynamic';
 
 function getSupabaseAdmin() {
     // Intentar obtener la key de servicio de varias formas segura (sin prefijo) o legacy (con prefijo)
@@ -87,7 +91,6 @@ export async function POST(req: NextRequest) {
 
         // 1. Extraer Texto según el tipo de archivo
         if (file.type === "application/pdf") {
-            const pdf = (await import("pdf-parse")).default;
             const data = await pdf(buffer);
             textContent = data.text;
         } else if (
