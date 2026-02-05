@@ -91,8 +91,15 @@ export async function POST(req: NextRequest) {
 
         // 1. Extraer Texto según el tipo de archivo
         if (file.type === "application/pdf") {
-            const data = await pdf(buffer);
-            textContent = data.text;
+            try {
+                // Configuración básica para evitar features exóticas que causen crash
+                const data = await pdf(buffer);
+                textContent = data.text;
+            } catch (pdfError: any) {
+                console.error("❌ Critical PDF Parse Error:", pdfError);
+                // Lanzamos error controlado que el catch principal transformará en JSON
+                throw new Error(`Error interno leyendo el PDF: ${pdfError.message || 'Estructura no soportada'}`);
+            }
         } else if (
             file.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
         ) {

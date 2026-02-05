@@ -40,7 +40,7 @@ export function ChatControls({
             filesArray.forEach(file => {
                 if (file.type.startsWith("image/")) {
                     images.push(file);
-                } else if ([".txt", ".md", ".json"].some(ext => file.name.toLowerCase().endsWith(ext))) {
+                } else if ([".txt", ".md", ".json", ".pdf", ".doc", ".docx"].some(ext => file.name.toLowerCase().endsWith(ext))) {
                     textFile = file; // solo 1 archivo de texto
                 }
             });
@@ -129,7 +129,7 @@ export function ChatControls({
                         type="file"
                         ref={fileInputRef}
                         className="hidden"
-                        accept="image/*,.txt,.md,.json"
+                        accept="image/*,.txt,.md,.json,.pdf,.doc,.docx"
                         multiple
                         onChange={handleFileSelect}
                         disabled={isUploading || selectedFiles.length >= 3}
