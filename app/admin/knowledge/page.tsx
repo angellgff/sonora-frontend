@@ -93,9 +93,18 @@ export default function KnowledgeDashboard() {
 
     try {
       const response = await fetch("/api/admin/upload-knowledge", { method: "POST", body: formData });
-      const data = await response.json();
 
-      if (!response.ok) throw new Error(data.error || "Error");
+      let data;
+      const responseText = await response.text();
+
+      try {
+        data = JSON.parse(responseText);
+      } catch (e) {
+        console.error("Non-JSON response:", responseText);
+        throw new Error(`Server Error: ${response.status} ${response.statusText} - ${responseText.slice(0, 50)}...`);
+      }
+
+      if (!response.ok) throw new Error(data.error || "Error desconocido en el servidor");
 
       setUploadStatus({ type: 'success', message: `¡Listo! ${data.chunks} fragmentos aprendidos.` });
       setTimeout(() => { // Cerrar modal y recargar tras éxito

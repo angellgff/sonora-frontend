@@ -132,7 +132,7 @@ export async function POST(req: NextRequest) {
         let processed = 0;
 
         // 4. Generar Embeddings y Guardar en Supabase (OPTIMIZADO: Batch Processing)
-        const BATCH_SIZE = 10; // Procesar de 10 en 10 para no saturar
+        const BATCH_SIZE = 50; // Aumentado a 50 para velocidad máxima (menos viajes HTTP)
         for (let i = 0; i < chunks.length; i += BATCH_SIZE) {
             const batchChunks = chunks.slice(i, i + BATCH_SIZE);
             console.log(`⚡ Procesando lote ${i / BATCH_SIZE + 1}...`);
