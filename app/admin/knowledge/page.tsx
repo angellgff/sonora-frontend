@@ -257,8 +257,13 @@ export default function KnowledgeDashboard() {
                   <Upload className="w-12 h-12 text-[#00E599] mb-4" />
                 )}
                 <p className="text-sm font-medium text-slate-300 mt-2">
-                  {isUploading ? "Procesando Inteligentemente..." : "Click para seleccionar"}
+                  {isUploading ? "Memorizando documento..." : "Click para seleccionar"}
                 </p>
+                {isUploading && (
+                  <p className="text-xs text-slate-500 mt-2 animate-pulse">
+                    Archivos grandes pueden tardar hasta 1 minuto. No cierres esta ventana.
+                  </p>
+                )}
               </div>
 
               {/* Mensajes de Estado */}

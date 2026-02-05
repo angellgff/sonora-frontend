@@ -129,7 +129,7 @@ export function ChatControls({
                         type="file"
                         ref={fileInputRef}
                         className="hidden"
-                        accept="image/*,.txt,.md,.json,.pdf,.doc,.docx"
+                        accept="image/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,.txt,.md,.json,.pdf,.doc,.docx"
                         multiple
                         onChange={handleFileSelect}
                         disabled={isUploading || selectedFiles.length >= 3}

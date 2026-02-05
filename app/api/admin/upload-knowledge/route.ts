@@ -131,37 +131,56 @@ export async function POST(req: NextRequest) {
         // Si esto falla (ej: sin VPN para OpenAI), NO se sube al Storage
         let processed = 0;
 
-        for (let i = 0; i < chunks.length; i++) {
-            const chunk = chunks[i];
+        // 4. Generar Embeddings y Guardar en Supabase (OPTIMIZADO: Batch Processing)
+        const BATCH_SIZE = 10; // Procesar de 10 en 10 para no saturar
+        for (let i = 0; i < chunks.length; i += BATCH_SIZE) {
+            const batchChunks = chunks.slice(i, i + BATCH_SIZE);
+            console.log(`⚡ Procesando lote ${i / BATCH_SIZE + 1}...`);
 
-            const embeddingResponse = await openai.embeddings.create({
-                model: "text-embedding-3-small",
-                input: chunk,
-            });
+            try {
+                // OpenAI permite enviar array de inputs (mucho más rápido)
+                const embeddingResponse = await openai.embeddings.create({
+                    model: "text-embedding-3-small",
+                    input: batchChunks,
+                });
 
-            const embedding = embeddingResponse.data[0].embedding;
-            const metadata = {
-                total_chunks: chunks.length,
-                original_file: file.name,
-                storage_path: storagePath
-            };
+                const embeddings = embeddingResponse.data.map(e => e.embedding);
 
-            // Llamada a la función RPC de Supabase
-            const { error } = await supabaseAdmin.rpc("insert_knowledge_chunk", {
-                p_document_name: file.name,
-                p_document_type: file.type,
-                p_chunk_text: chunk,
-                p_chunk_index: i,
-                p_embedding: embedding,
-                p_metadata: metadata
-            });
+                // Insertar en paralelo a Supabase
+                const insertPromises = batchChunks.map((chunk, idx) => {
+                    const embedding = embeddings[idx];
+                    const globalIndex = i + idx;
 
-            if (error) {
-                console.error("❌ Error insertando chunk:", error);
-                throw error;
+                    const metadata = {
+                        total_chunks: chunks.length,
+                        original_file: file.name,
+                        storage_path: storagePath
+                    };
+
+                    return supabaseAdmin.rpc("insert_knowledge_chunk", {
+                        p_document_name: file.name,
+                        p_document_type: file.type,
+                        p_chunk_text: chunk,
+                        p_chunk_index: globalIndex,
+                        p_embedding: embedding,
+                        p_metadata: metadata
+                    });
+                });
+
+                // Esperar a que se guarden todos los del lote
+                const results = await Promise.all(insertPromises);
+
+                // Verificar errores
+                const failed = results.find(r => r.error);
+                if (failed) throw failed.error;
+
+                processed += batchChunks.length;
+                chunksInserted.push(file.name);
+
+            } catch (batchError) {
+                console.error("❌ Error en lote:", batchError);
+                throw batchError;
             }
-            processed++;
-            chunksInserted.push(file.name); // Para rollback si falla después
         }
 
         console.log(`✅ ${processed} chunks guardados correctamente.`);
