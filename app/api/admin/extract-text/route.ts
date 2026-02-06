@@ -25,8 +25,18 @@ export async function POST(req: NextRequest) {
         // 1. Extraer Texto según el tipo de archivo
         if (file.type === "application/pdf") {
             try {
-                const data = await pdf(buffer);
-                textContent = data.text;
+                // Configuración básica con pdf2json
+                const PDFParser = require("pdf2json");
+                const pdfParser = new PDFParser(null, 1); // 1 = Raw Text
+
+                textContent = await new Promise((resolve, reject) => {
+                    pdfParser.on("pdfParser_dataError", (errData: any) => reject(new Error(errData.parserError)));
+                    pdfParser.on("pdfParser_dataReady", (pdfData: any) => {
+                        resolve(pdfParser.getRawTextContent());
+                    });
+                    pdfParser.parseBuffer(buffer);
+                });
+
             } catch (pdfError: any) {
                 console.error("❌ Critical PDF Parse Error:", pdfError);
                 throw new Error(`Error interno leyendo el PDF: ${pdfError.message || 'Estructura no soportada'}`);
