@@ -5,6 +5,7 @@ import mammoth from "mammoth";
 // Configuración para Vercel / Next.js
 export const maxDuration = 60;
 export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs'; // Forzar runtime de Node.js para soporte de Buffer y dependencias nativas
 
 export async function POST(req: NextRequest) {
     try {
