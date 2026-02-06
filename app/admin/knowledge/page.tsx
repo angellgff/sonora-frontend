@@ -17,7 +17,12 @@ export default function KnowledgeDashboard() {
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadStatus, setUploadStatus] = useState<{ type: 'success' | 'error' | null, message: string }>({ type: null, message: '' });
+  const [mounted, setMounted] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Cargar lista de archivos
   const loadFiles = async () => {
@@ -179,6 +184,8 @@ export default function KnowledgeDashboard() {
   };
 
   // -- Componente Visual --
+  if (!mounted) return null; // Prevenir error de hidratación (se renderiza solo en cliente)
+
   return (
     <div className="min-h-screen bg-[#050B14] text-slate-100 font-sans selection:bg-[#00E599] selection:text-black relative overflow-x-hidden">
 
