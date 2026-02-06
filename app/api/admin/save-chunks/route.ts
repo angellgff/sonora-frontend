@@ -36,14 +36,26 @@ export async function POST(req: NextRequest) {
         const openai = getOpenAI();
 
         // 1. Generar Embeddings en lote
-        const embeddingResponse = await openai.embeddings.create({
-            model: "text-embedding-3-small",
-            input: chunks,
-        });
+        console.log("🤖 Solicitando Embeddings a OpenAI...");
+        const embeddingStart = Date.now();
 
-        const embeddings = embeddingResponse.data.map(e => e.embedding);
+        // Wrapper con timeout para OpenAI (15s)
+        const embeddingResponse = await Promise.race([
+            openai.embeddings.create({
+                model: "text-embedding-3-small",
+                input: chunks,
+            }),
+            new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout conectando con OpenAI (15s)")), 15000))
+        ]) as any;
+
+        console.log(`✅ Embeddings recibidos en ${Date.now() - embeddingStart}ms`);
+
+        const embeddings = embeddingResponse.data.map((e: any) => e.embedding);
 
         // 2. Insertar en paralelo a Supabase
+        console.log("🗄️ Insertando en Supabase...");
+        const dbStart = Date.now();
+
         const insertPromises = chunks.map((chunk: string, idx: number) => {
             const embedding = embeddings[idx];
             const globalIndex = startIndex + idx;
@@ -66,6 +78,7 @@ export async function POST(req: NextRequest) {
         });
 
         const results = await Promise.all(insertPromises);
+        console.log(`✅ Supabase insert completado en ${Date.now() - dbStart}ms`);
 
         const failed = results.find((r: any) => r.error);
         if (failed) throw failed.error;
