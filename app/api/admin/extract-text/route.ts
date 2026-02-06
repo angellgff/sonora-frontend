@@ -8,6 +8,7 @@ export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs'; // Forzar runtime de Node.js para soporte de Buffer y dependencias nativas
 
 export async function POST(req: NextRequest) {
+    console.log(`📥 API Hit: /extract-text - Mem: ${(process.memoryUsage().heapUsed / 1024 / 1024).toFixed(2)} MB`);
     try {
         const formData = await req.formData();
         const file = formData.get("file") as File;
