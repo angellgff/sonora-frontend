@@ -137,7 +137,7 @@ export default function LoginPage() {
             </div>
           </form>
 
-          <p className="mt-8 text-center text-sm text-slate-500">
+          <p className="mt-8 text-center text-sm text-slate-400">
             ¿No tienes una cuenta?{" "}
             <Link
               href="/auth/sign-up"
