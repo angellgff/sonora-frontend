@@ -126,6 +126,7 @@ export default function KnowledgeDashboard() {
       if (!extractRes.ok) throw new Error(extractData.error || "Error extrayendo texto");
 
       const text = extractData.text;
+      const storagePath = extractData.storagePath; // Path real del archivo en Storage
       if (!text || text.length === 0) throw new Error("Archivo subido pero sin texto legible");
 
       // PASO 2: Chunking en Cliente
@@ -150,7 +151,7 @@ export default function KnowledgeDashboard() {
           chunks: batch,
           fileName: file.name,
           fileType: file.type,
-          storagePath: `${Date.now()}_${file.name}`, // Path simple
+          storagePath: storagePath, // Usar el path real devuelto por la API
           startIndex: i
         };
 

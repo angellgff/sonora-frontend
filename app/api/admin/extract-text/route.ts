@@ -1,11 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
 import pdf from "pdf-parse";
 import mammoth from "mammoth";
+import { createClient } from "@supabase/supabase-js";
 
 // Configuración para Vercel / Next.js
 export const maxDuration = 60;
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs'; // Forzar runtime de Node.js para soporte de Buffer y dependencias nativas
+
+function getSupabaseAdmin() {
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY;
+    if (!serviceRoleKey || !process.env.NEXT_PUBLIC_SUPABASE_URL) {
+        throw new Error("❌ CONFIG ERROR: Faltan variables de entorno de Supabase.");
+    }
+    return createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL,
+        serviceRoleKey,
+        { auth: { persistSession: false, autoRefreshToken: false } }
+    );
+}
 
 export async function POST(req: NextRequest) {
     console.log(`📥 API Hit: /extract-text - Mem: ${(process.memoryUsage().heapUsed / 1024 / 1024).toFixed(2)} MB`);
@@ -22,7 +35,26 @@ export async function POST(req: NextRequest) {
         const buffer = Buffer.from(await file.arrayBuffer());
         let textContent = "";
 
-        // 1. Extraer Texto según el tipo de archivo
+        // 1. Subir archivo original a Storage para descarga futura
+        const supabaseAdmin = getSupabaseAdmin();
+        const storagePath = `${Date.now()}_${file.name}`;
+
+        console.log(`📤 Subiendo archivo a Storage: ${storagePath}`);
+        const { error: uploadError } = await supabaseAdmin.storage
+            .from('knowledge-files')
+            .upload(storagePath, buffer, {
+                contentType: file.type,
+                upsert: true
+            });
+
+        if (uploadError) {
+            console.error("⚠️ Error subiendo a Storage (continuando sin backup):", uploadError);
+            // No fallar por esto, solo loguear warning
+        } else {
+            console.log(`✅ Archivo subido a Storage exitosamente`);
+        }
+
+        // 2. Extraer Texto según el tipo de archivo
         if (file.type === "application/pdf") {
             try {
                 // Configuración básica con pdf2json
@@ -62,6 +94,7 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({
             success: true,
             text: textContent,
+            storagePath: uploadError ? null : storagePath, // Devolver path solo si se subió exitosamente
             metadata: {
                 name: file.name,
                 type: file.type,

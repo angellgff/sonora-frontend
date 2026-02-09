@@ -21,6 +21,44 @@ function getOpenAI() {
     return new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 }
 
+// Función para generar metadata enriquecida con IA
+async function enrichChunkMetadata(openai: OpenAI, chunk: string, fileName: string): Promise<{ summary: string; keywords: string[] }> {
+    try {
+        const response = await openai.chat.completions.create({
+            model: "gpt-4o-mini",
+            messages: [
+                {
+                    role: "system",
+                    content: `Eres un asistente que analiza fragmentos de documentos. Para cada fragmento, genera:
+1. Un resumen de 1-2 oraciones que capture la idea principal
+2. 3-5 palabras clave relevantes (en español)
+
+Responde SOLO en formato JSON: {"summary": "...", "keywords": ["...", "..."]}`
+                },
+                {
+                    role: "user",
+                    content: `Archivo: ${fileName}\n\nFragmento:\n${chunk.substring(0, 1500)}...` // Limitar para no exceder tokens
+                }
+            ],
+            max_tokens: 200,
+            temperature: 0.3
+        });
+
+        const content = response.choices[0]?.message?.content || '{}';
+        // Limpiar posibles artefactos de markdown
+        const cleanContent = content.replace(/```json\n?|\n?```/g, '').trim();
+        const parsed = JSON.parse(cleanContent);
+
+        return {
+            summary: parsed.summary || "Sin resumen disponible",
+            keywords: Array.isArray(parsed.keywords) ? parsed.keywords : []
+        };
+    } catch (error) {
+        console.warn("⚠️ Error generando metadata enriquecida:", error);
+        return { summary: "Sin resumen", keywords: [] };
+    }
+}
+
 export async function POST(req: NextRequest) {
     try {
         const body = await req.json();
@@ -39,7 +77,6 @@ export async function POST(req: NextRequest) {
         console.log("🤖 Solicitando Embeddings a OpenAI...");
         const embeddingStart = Date.now();
 
-        // Wrapper con timeout para OpenAI (15s)
         const embeddingResponse = await Promise.race([
             openai.embeddings.create({
                 model: "text-embedding-3-small",
@@ -52,19 +89,40 @@ export async function POST(req: NextRequest) {
 
         const embeddings = embeddingResponse.data.map((e: any) => e.embedding);
 
-        // 2. Insertar en paralelo a Supabase
+        // 2. Generar metadata enriquecida para cada chunk (en paralelo, pero limitado)
+        console.log("🧠 Generando metadata enriquecida con IA...");
+        const metadataStart = Date.now();
+
+        // Procesar en batches de 5 para no saturar la API
+        const enrichedMetadata: Array<{ summary: string; keywords: string[] }> = [];
+        const ENRICH_BATCH_SIZE = 5;
+
+        for (let i = 0; i < chunks.length; i += ENRICH_BATCH_SIZE) {
+            const batch = chunks.slice(i, i + ENRICH_BATCH_SIZE);
+            const batchResults = await Promise.all(
+                batch.map((chunk: string) => enrichChunkMetadata(openai, chunk, fileName))
+            );
+            enrichedMetadata.push(...batchResults);
+        }
+
+        console.log(`✅ Metadata enriquecida en ${Date.now() - metadataStart}ms`);
+
+        // 3. Insertar en paralelo a Supabase
         console.log("🗄️ Insertando en Supabase...");
         const dbStart = Date.now();
 
         const insertPromises = chunks.map((chunk: string, idx: number) => {
             const embedding = embeddings[idx];
             const globalIndex = startIndex + idx;
+            const enriched = enrichedMetadata[idx] || { summary: "", keywords: [] };
 
-            // Metadata simplificada para ahorrar espacio, el total_chunks real se calculará al finalizar todo
+            // Metadata enriquecida
             const metadata = {
                 original_file: fileName,
                 storage_path: storagePath,
-                batch_index: idx
+                batch_index: idx,
+                summary: enriched.summary,
+                keywords: enriched.keywords
             };
 
             return supabaseAdmin.rpc("insert_knowledge_chunk", {
