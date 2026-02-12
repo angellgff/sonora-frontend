@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { Users, UserPlus, Shield, User, Loader2, CheckCircle, XCircle, ArrowLeft } from "lucide-react";
-import Link from "next/link";
+import { Users, UserPlus, Shield, User, Loader2, CheckCircle, XCircle } from "lucide-react";
+import AppSidebar from "@/components/app-sidebar";
 
 type UserProfile = {
     id: string;
@@ -83,15 +83,13 @@ export default function AdminUsersPage() {
             <div className="fixed top-[-20%] left-[-10%] w-[50%] h-[50%] bg-[#00E599]/10 rounded-full blur-[120px] pointer-events-none"></div>
             <div className="fixed bottom-[-20%] right-[-10%] w-[60%] h-[60%] bg-[#3B82F6]/10 rounded-full blur-[150px] pointer-events-none"></div>
 
-            <div className="relative z-10 max-w-6xl mx-auto p-6">
+            <div className="relative z-10 max-w-4xl mx-auto p-6 pt-14 md:pt-6 md:pl-[68px]">
+
+                {/* Sidebar */}
+                <AppSidebar />
+
                 {/* Header */}
                 <div className="flex items-center gap-4 mb-8">
-                    <Link
-                        href="/dashboard"
-                        className="p-2 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 transition-colors"
-                    >
-                        <ArrowLeft className="w-5 h-5" />
-                    </Link>
                     <div className="flex items-center gap-3">
                         <div className="p-3 rounded-xl bg-[#00E599]/10 border border-[#00E599]/20">
                             <Users className="w-6 h-6 text-[#00E599]" />
@@ -163,8 +161,8 @@ export default function AdminUsersPage() {
 
                                 {message && (
                                     <div className={`p-3 rounded-xl flex items-center gap-2 text-sm ${message.type === "success"
-                                            ? "bg-green-500/10 border border-green-500/20 text-green-400"
-                                            : "bg-red-500/10 border border-red-500/20 text-red-400"
+                                        ? "bg-green-500/10 border border-green-500/20 text-green-400"
+                                        : "bg-red-500/10 border border-red-500/20 text-red-400"
                                         }`}>
                                         {message.type === "success" ? <CheckCircle className="w-4 h-4" /> : <XCircle className="w-4 h-4" />}
                                         {message.text}
@@ -211,27 +209,27 @@ export default function AdminUsersPage() {
                                     {users.map((user) => (
                                         <div
                                             key={user.id}
-                                            className="flex items-center justify-between p-4 bg-black/20 border border-white/5 rounded-xl hover:bg-white/5 transition-colors"
+                                            className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 bg-black/20 border border-white/5 rounded-xl hover:bg-white/5 transition-colors"
                                         >
-                                            <div className="flex items-center gap-3">
-                                                <div className={`p-2 rounded-lg ${user.role === "admin" ? "bg-amber-500/10" : "bg-slate-500/10"}`}>
+                                            <div className="flex items-center gap-3 min-w-0">
+                                                <div className={`p-2 rounded-lg shrink-0 ${user.role === "admin" ? "bg-amber-500/10" : "bg-slate-500/10"}`}>
                                                     {user.role === "admin" ? (
                                                         <Shield className="w-4 h-4 text-amber-400" />
                                                     ) : (
                                                         <User className="w-4 h-4 text-slate-400" />
                                                     )}
                                                 </div>
-                                                <div>
-                                                    <p className="font-medium text-white">
+                                                <div className="min-w-0">
+                                                    <p className="font-medium text-white truncate">
                                                         {user.full_name || user.email}
                                                     </p>
-                                                    <p className="text-sm text-slate-400">{user.email}</p>
+                                                    <p className="text-sm text-slate-400 truncate">{user.email}</p>
                                                 </div>
                                             </div>
-                                            <div className="flex items-center gap-3">
+                                            <div className="flex items-center ml-11 sm:ml-0">
                                                 <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${user.role === "admin"
-                                                        ? "bg-amber-500/10 text-amber-400 border border-amber-500/20"
-                                                        : "bg-slate-500/10 text-slate-400 border border-slate-500/20"
+                                                    ? "bg-amber-500/10 text-amber-400 border border-amber-500/20"
+                                                    : "bg-slate-500/10 text-slate-400 border border-slate-500/20"
                                                     }`}>
                                                     {user.role === "admin" ? "Admin" : "Usuario"}
                                                 </span>

@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { Upload, FileText, Trash2, CheckCircle, AlertCircle, Loader2, RefreshCw, X, MessageSquare, LogOut, Download } from "lucide-react";
+import { Upload, FileText, Trash2, CheckCircle, AlertCircle, Loader2, RefreshCw, X, MessageSquare, Download } from "lucide-react";
+import AppSidebar from "@/components/app-sidebar";
 import Link from "next/link";
 
 interface KnowledgeFile {
@@ -88,20 +89,62 @@ export default function KnowledgeDashboard() {
       alert("Error al descargar el archivo");
     }
   };
+  // Función de chunking semántico: respeta párrafos y agrega overlap
+  const splitTextIntoChunks = (text: string, maxChunkSize = 2000, overlap = 200) => {
+    // 1. Dividir por párrafos (doble salto de línea) o secciones
+    const paragraphs = text
+      .split(/\n\s*\n/)
+      .map(p => p.trim())
+      .filter(p => p.length > 0);
 
-  // Importación dinámica para tokenizador (solo si no se usa arriba)
-  // import { getEncoding } from "js-tiktoken";
-  // OJO: js-tiktoken puede ser pesado en client, pero necesario para split exacto.
-  // Alternativamente, usaremos un split simple por caracteres para el cliente y el backend re-verificará si es necesario
+    // Si no hay párrafos claros, split por saltos simples
+    const segments = paragraphs.length <= 1
+      ? text.split(/\n/).map(s => s.trim()).filter(s => s.length > 0)
+      : paragraphs;
 
-  // Función auxiliar para dividir texto
-  const splitTextIntoChunks = (text: string, chunkSize = 1000) => {
     const chunks: string[] = [];
-    for (let i = 0; i < text.length; i += chunkSize) {
-      chunks.push(text.slice(i, i + chunkSize));
+    let currentChunk = '';
+
+    for (const segment of segments) {
+      // Si un solo segmento excede el máximo, lo partimos con overlap
+      if (segment.length > maxChunkSize) {
+        // Guardar lo acumulado primero
+        if (currentChunk.trim()) {
+          chunks.push(currentChunk.trim());
+          currentChunk = '';
+        }
+        // Partir el segmento largo con overlap
+        let start = 0;
+        while (start < segment.length) {
+          const end = Math.min(start + maxChunkSize, segment.length);
+          chunks.push(segment.slice(start, end));
+          start += maxChunkSize - overlap;
+          if (start + overlap >= segment.length) break;
+        }
+        continue;
+      }
+
+      // Si agregar este segmento excede el límite, guardar y empezar nuevo chunk
+      const separator = currentChunk ? '\n\n' : '';
+      if ((currentChunk + separator + segment).length > maxChunkSize) {
+        if (currentChunk.trim()) {
+          chunks.push(currentChunk.trim());
+          // Overlap: tomar los últimos ~overlap caracteres del chunk anterior
+          const overlapText = currentChunk.slice(-overlap).trim();
+          currentChunk = overlapText + '\n\n' + segment;
+        } else {
+          currentChunk = segment;
+        }
+      } else {
+        currentChunk += separator + segment;
+      }
     }
-    // Nota: El backend de OpenAI usa tokens, pero dividir por chars (aprox 4 chars = 1 token) es un proxy seguro
-    // 1000 chars ~= 250 tokens. Es seguro.
+
+    // Agregar el último chunk si tiene contenido
+    if (currentChunk.trim()) {
+      chunks.push(currentChunk.trim());
+    }
+
     return chunks;
   };
 
@@ -194,16 +237,11 @@ export default function KnowledgeDashboard() {
       <div className="fixed top-[-20%] left-[-10%] w-[50%] h-[50%] bg-[#00E599]/10 rounded-full blur-[120px] pointer-events-none"></div>
       <div className="fixed bottom-[-20%] right-[-10%] w-[60%] h-[60%] bg-[#3B82F6]/10 rounded-full blur-[150px] pointer-events-none"></div>
 
-      {/* Nav */}
-      <nav className="relative z-50 w-full px-6 py-6 flex justify-between items-center max-w-7xl mx-auto border-b border-white/5">
-        <div className="flex items-center gap-3">
-          <span className="h-2 w-2 rounded-full bg-[#00E599] shadow-[0_0_10px_#00E599]"></span>
-          <span className="text-sm font-semibold tracking-wide uppercase text-slate-400">Panel Administrativo</span>
-        </div>
-        <div className="h-8 w-8 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-xs font-bold text-white">BS</div>
-      </nav>
+      {/* Sidebar */}
+      <AppSidebar />
 
-      <main className="relative z-10 container mx-auto px-4 sm:px-6 lg:px-8 max-w-6xl mt-8 mb-20">
+      {/* Main content with sidebar offset */}
+      <div className="md:pl-[68px] relative z-10 mx-auto px-4 sm:px-6 lg:px-8 max-w-4xl mt-8 mb-20 pt-14 md:pt-6">
 
         {/* Header Dashboard */}
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10">
@@ -218,10 +256,7 @@ export default function KnowledgeDashboard() {
             <Link href="/home-test" className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all text-sm font-medium text-slate-300 hover:text-[#00E599]">
               <MessageSquare className="w-4 h-4" /> <span className="hidden md:inline">Probar Chat</span>
             </Link>
-            {/* Botón Salir al Dashboard */}
-            <Link href="/dashboard" className="flex items-center justify-center px-3 py-2.5 rounded-xl border border-white/10 hover:bg-white/5 transition-all text-sm font-medium text-slate-400" title="Ir a Dashboard Usuario">
-              <LogOut className="w-4 h-4" />
-            </Link>
+
             {/* Botón Actualizar (Existente) */}
             <button onClick={() => loadFiles()} className="flex items-center gap-2 px-5 py-2.5 rounded-xl border border-white/10 hover:bg-white/5 transition-all text-sm font-medium">
               <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} /> Actualizar
@@ -245,11 +280,11 @@ export default function KnowledgeDashboard() {
 
         {/* File List Table */}
         <div className="backdrop-blur-xl bg-white/5 border border-white/10 rounded-2xl overflow-hidden shadow-xl">
-          <div className="grid grid-cols-12 gap-4 p-5 border-b border-white/5 bg-white/5 text-xs font-semibold uppercase tracking-wider text-slate-400">
-            <div className="col-span-5 md:col-span-6 pl-2">Nombre del Archivo</div>
-            <div className="col-span-3 md:col-span-2 text-center">Formato</div>
-            <div className="col-span-2 md:col-span-2 text-right">Creado</div>
-            <div className="col-span-2 md:col-span-2 text-right pr-2">Acciones</div>
+          <div className="hidden md:grid grid-cols-12 gap-4 p-5 border-b border-white/5 bg-white/5 text-xs font-semibold uppercase tracking-wider text-slate-400">
+            <div className="col-span-6 pl-2">Nombre del Archivo</div>
+            <div className="col-span-2 text-center">Formato</div>
+            <div className="col-span-2 text-right">Creado</div>
+            <div className="col-span-2 text-right pr-2">Acciones</div>
           </div>
 
           <div className="divide-y divide-white/5">
@@ -259,43 +294,75 @@ export default function KnowledgeDashboard() {
               <div className="p-8 text-center text-slate-500">No hay documentos en memoria aún.</div>
             ) : (
               files.map((file, idx) => (
-                <div key={idx} className="group grid grid-cols-12 gap-4 p-4 items-center hover:bg-white/[0.02] transition-colors">
-                  {/* Nombre */}
-                  <div className="col-span-5 md:col-span-6 flex items-center gap-4 pl-2">
+                <div key={idx} className="group p-4 hover:bg-white/[0.02] transition-colors">
+                  {/* Mobile: stacked layout */}
+                  <div className="flex items-center gap-3 md:hidden">
                     <div className={`h-10 w-10 rounded-lg flex items-center justify-center shrink-0 border ${getFileIconColor(file.type).bg} ${getFileIconColor(file.type).border}`}>
                       <FileText className={`w-5 h-5 ${getFileIconColor(file.type).text}`} />
                     </div>
-                    <div className="min-w-0">
+                    <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-white truncate group-hover:text-[#00E599] transition-colors">{file.name}</p>
-                      <p className="text-xs text-slate-500">{file.chunks} chunks</p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-white/10 text-slate-300">
+                          {getFileFormatLabel(file.type)}
+                        </span>
+                        <span className="text-xs text-slate-500">{file.chunks} chunks</span>
+                        <span className="text-xs text-slate-500">{new Date(file.created_at).toLocaleDateString()}</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <button
+                        onClick={() => handleDownload(file.name)}
+                        className="p-1.5 rounded-lg text-slate-400 hover:text-[#00E599] hover:bg-[#00E599]/10 transition-all"
+                        title="Descargar"
+                      >
+                        <Download className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(file.name)}
+                        className="p-1.5 rounded-lg text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition-all"
+                        title="Eliminar"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
                     </div>
                   </div>
-                  {/* Tipo */}
-                  <div className="col-span-3 md:col-span-2 flex justify-center">
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-white/10 text-slate-300">
-                      {file.type.split('/')[1]?.toUpperCase() || 'FILE'}
-                    </span>
-                  </div>
-                  {/* Fecha */}
-                  <div className="col-span-2 md:col-span-2 text-right text-sm text-slate-400">
-                    {new Date(file.created_at).toLocaleDateString()}
-                  </div>
-                  {/* Acciones */}
-                  <div className="col-span-2 md:col-span-2 flex justify-end pr-2">
-                    <button
-                      onClick={() => handleDownload(file.name)}
-                      className="p-2 rounded-lg text-slate-400 hover:text-[#00E599]/10 hover:bg-[#00E599]/10 transition-all"
-                      title="Descargar archivo"
-                    >
-                      <Download className="w-5 h-5" />
-                    </button>
-                    <button
-                      onClick={() => handleDelete(file.name)}
-                      className="p-2 rounded-lg text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition-all"
-                      title="Eliminar memoria"
-                    >
-                      <Trash2 className="w-5 h-5" />
-                    </button>
+
+                  {/* Desktop: grid layout */}
+                  <div className="hidden md:grid grid-cols-12 gap-4 items-center">
+                    <div className="col-span-6 flex items-center gap-4 pl-2">
+                      <div className={`h-10 w-10 rounded-lg flex items-center justify-center shrink-0 border ${getFileIconColor(file.type).bg} ${getFileIconColor(file.type).border}`}>
+                        <FileText className={`w-5 h-5 ${getFileIconColor(file.type).text}`} />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-white truncate group-hover:text-[#00E599] transition-colors">{file.name}</p>
+                        <p className="text-xs text-slate-500">{file.chunks} chunks</p>
+                      </div>
+                    </div>
+                    <div className="col-span-2 flex justify-center">
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-white/10 text-slate-300">
+                        {getFileFormatLabel(file.type)}
+                      </span>
+                    </div>
+                    <div className="col-span-2 text-right text-sm text-slate-400">
+                      {new Date(file.created_at).toLocaleDateString()}
+                    </div>
+                    <div className="col-span-2 flex justify-end pr-2">
+                      <button
+                        onClick={() => handleDownload(file.name)}
+                        className="p-2 rounded-lg text-slate-400 hover:text-[#00E599]/10 hover:bg-[#00E599]/10 transition-all"
+                        title="Descargar archivo"
+                      >
+                        <Download className="w-5 h-5" />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(file.name)}
+                        className="p-2 rounded-lg text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition-all"
+                        title="Eliminar memoria"
+                      >
+                        <Trash2 className="w-5 h-5" />
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))
@@ -303,7 +370,7 @@ export default function KnowledgeDashboard() {
           </div>
         </div>
 
-      </main>
+      </div>
 
       {/* MODAL DE CARGA (Overlay) */}
       {isUploadModalOpen && (
@@ -376,4 +443,20 @@ function getFileIconColor(type: string) {
   if (type.includes('pdf')) return { bg: 'bg-red-500/10', border: 'border-red-500/20', text: 'text-red-500' };
   if (type.includes('word') || type.includes('doc')) return { bg: 'bg-blue-500/10', border: 'border-blue-500/20', text: 'text-blue-500' };
   return { bg: 'bg-slate-500/10', border: 'border-slate-500/20', text: 'text-slate-500' };
+}
+
+function getFileFormatLabel(mimeType: string): string {
+  if (mimeType.includes('pdf')) return 'PDF';
+  if (mimeType.includes('wordprocessingml') || mimeType.includes('msword')) return 'DOCX';
+  if (mimeType.includes('spreadsheetml') || mimeType.includes('excel')) return 'XLSX';
+  if (mimeType.includes('presentationml') || mimeType.includes('powerpoint')) return 'PPTX';
+  if (mimeType.includes('plain')) return 'TXT';
+  if (mimeType.includes('csv')) return 'CSV';
+  if (mimeType.includes('json')) return 'JSON';
+  if (mimeType.includes('html')) return 'HTML';
+  // Fallback: try to get a short extension
+  const parts = mimeType.split('/');
+  const sub = parts[1] || '';
+  if (sub.length <= 6) return sub.toUpperCase();
+  return 'FILE';
 }

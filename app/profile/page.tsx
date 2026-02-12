@@ -3,9 +3,9 @@
 import React, { useState, useEffect, useRef } from "react";
 import { createBrowserClient } from "@supabase/ssr";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Camera, User, Mail, Shield, Save, Loader2, CheckCircle, AlertCircle } from "lucide-react";
-import Link from "next/link";
+import { Camera, User, Mail, Shield, Save, Loader2, CheckCircle, AlertCircle } from "lucide-react";
 import Image from "next/image";
+import AppSidebar from "@/components/app-sidebar";
 
 export default function ProfilePage() {
     const [user, setUser] = useState<any>(null);
@@ -134,15 +134,11 @@ export default function ProfilePage() {
             <div className="fixed top-[-20%] left-[-10%] w-[50%] h-[50%] bg-[#00E599]/5 rounded-full blur-[120px] pointer-events-none"></div>
             <div className="fixed bottom-[-20%] right-[-10%] w-[60%] h-[60%] bg-[#3B82F6]/5 rounded-full blur-[150px] pointer-events-none"></div>
 
-            {/* Nav */}
-            <nav className="relative z-50 w-full px-6 py-6 flex items-center max-w-5xl mx-auto">
-                <Link href="/dashboard" className="flex items-center gap-2 text-slate-400 hover:text-[#00E599] transition-colors">
-                    <ArrowLeft className="w-5 h-5" />
-                    <span className="font-medium">Volver al Dashboard</span>
-                </Link>
-            </nav>
+            {/* Sidebar */}
+            <AppSidebar />
 
-            <main className="relative z-10 container mx-auto px-4 max-w-2xl mt-8">
+            {/* Main content with sidebar offset */}
+            <div className="md:pl-[68px] pt-16 md:pt-10 px-4 md:px-8 max-w-2xl mx-auto">
 
                 <div className="text-center mb-10">
                     <h1 className="text-3xl font-bold text-white mb-2">Mi Perfil</h1>
@@ -248,7 +244,7 @@ export default function ProfilePage() {
                     </form>
 
                 </div>
-            </main>
+            </div>
         </div>
     );
 }
