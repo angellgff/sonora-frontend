@@ -1,4 +1,5 @@
 import React from "react";
+import ReactMarkdown from "react-markdown";
 import { Card } from "@/components/ui/card";
 import { MessageSquare, Bot, User } from "lucide-react";
 
@@ -28,6 +29,72 @@ const cleanContent = (text: string) => {
     }
     return text;
 };
+
+// Componente para renderizar markdown en mensajes del bot
+function MarkdownMessage({ content }: { content: string }) {
+    // Pre-procesar: unir números sueltos con la línea siguiente
+    // El modelo a veces pone "1.\n**Título:**" en vez de "1. **Título:**"
+    const processed = content.replace(/(\d+)\.\s*\n+\s*(\*{0,2})/g, '$1. $2');
+
+    return (
+        <ReactMarkdown
+            components={{
+                p: ({ children }) => (
+                    <p className="text-sm md:text-base leading-relaxed font-light mb-2 last:mb-0">{children}</p>
+                ),
+                strong: ({ children }) => (
+                    <strong className="font-semibold text-white">{children}</strong>
+                ),
+                em: ({ children }) => (
+                    <em className="italic text-slate-300">{children}</em>
+                ),
+                h1: ({ children }) => (
+                    <h3 className="text-base font-bold text-white mt-3 mb-1">{children}</h3>
+                ),
+                h2: ({ children }) => (
+                    <h3 className="text-base font-bold text-white mt-3 mb-1">{children}</h3>
+                ),
+                h3: ({ children }) => (
+                    <h4 className="text-sm font-bold text-white mt-2 mb-1">{children}</h4>
+                ),
+                ul: ({ children }) => (
+                    <ul className="list-disc list-inside space-y-1 my-2 text-sm md:text-base font-light">{children}</ul>
+                ),
+                ol: ({ children }) => (
+                    <ol className="list-decimal list-inside space-y-1 my-2 text-sm md:text-base font-light">{children}</ol>
+                ),
+                li: ({ children }) => (
+                    <li className="leading-relaxed">{children}</li>
+                ),
+                code: ({ children, className }) => {
+                    const isBlock = className?.includes("language-");
+                    if (isBlock) {
+                        return (
+                            <pre className="bg-black/30 border border-white/10 rounded-lg p-3 my-2 overflow-x-auto">
+                                <code className="text-xs text-green-300 font-mono">{children}</code>
+                            </pre>
+                        );
+                    }
+                    return (
+                        <code className="bg-white/10 text-[#00E599] px-1.5 py-0.5 rounded text-xs font-mono">{children}</code>
+                    );
+                },
+                pre: ({ children }) => <>{children}</>,
+                a: ({ href, children }) => (
+                    <a href={href} target="_blank" rel="noopener noreferrer" className="text-[#00E599] underline hover:text-[#00E599]/80 transition-colors">
+                        {children}
+                    </a>
+                ),
+                blockquote: ({ children }) => (
+                    <blockquote className="border-l-2 border-[#00E599]/40 pl-3 my-2 text-slate-300 italic">{children}</blockquote>
+                ),
+                hr: () => <hr className="border-white/10 my-3" />,
+            }}
+        >
+            {processed}
+        </ReactMarkdown>
+    );
+}
 
 export function ChatArea({
     messages,
@@ -138,9 +205,13 @@ export function ChatArea({
                                 </div>
                             ) : (
                                 <div>
-                                    <p className={`text-sm md:text-base leading-relaxed wrap-break-word ${msg.role === 'user' ? 'font-medium' : 'font-light'}`}>
-                                        {cleanContent(msg.content)}
-                                    </p>
+                                    {msg.role === "agent" ? (
+                                        <MarkdownMessage content={cleanContent(msg.content)} />
+                                    ) : (
+                                        <p className="text-sm md:text-base leading-relaxed wrap-break-word font-medium">
+                                            {cleanContent(msg.content)}
+                                        </p>
+                                    )}
 
                                     {/* Renderizar Imagenes si existen (Text Msg) */}
                                     {msg.images && msg.images.length > 0 && (

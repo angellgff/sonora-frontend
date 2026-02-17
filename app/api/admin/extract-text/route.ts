@@ -40,18 +40,34 @@ export async function POST(req: NextRequest) {
         const storagePath = `${Date.now()}_${file.name}`;
 
         console.log(`📤 Subiendo archivo a Storage: ${storagePath}`);
-        const { error: uploadError } = await supabaseAdmin.storage
-            .from('knowledge-files')
-            .upload(storagePath, buffer, {
-                contentType: file.type,
-                upsert: true
-            });
 
-        if (uploadError) {
-            console.error("⚠️ Error subiendo a Storage (continuando sin backup):", uploadError);
-            // No fallar por esto, solo loguear warning
-        } else {
-            console.log(`✅ Archivo subido a Storage exitosamente`);
+        // Intentar subir a Storage (OBLIGATORIO - si falla, no continuar)
+        let storageUploadSuccess = false;
+        for (let attempt = 1; attempt <= 2; attempt++) {
+            const { error: uploadError } = await supabaseAdmin.storage
+                .from('knowledge-files')
+                .upload(storagePath, buffer, {
+                    contentType: file.type,
+                    upsert: true
+                });
+
+            if (!uploadError) {
+                console.log(`✅ Archivo subido a Storage exitosamente (intento ${attempt})`);
+                storageUploadSuccess = true;
+                break;
+            }
+
+            console.error(`⚠️ Error subiendo a Storage (intento ${attempt}/2):`, uploadError);
+            if (attempt < 2) {
+                // Esperar 1 segundo antes de reintentar
+                await new Promise(r => setTimeout(r, 1000));
+            }
+        }
+
+        if (!storageUploadSuccess) {
+            return NextResponse.json({
+                error: "No se pudo subir el archivo a Storage. Por favor intenta de nuevo. Si el problema persiste, verifica que el bucket 'knowledge-files' exista en Supabase."
+            }, { status: 500 });
         }
 
         // 2. Extraer Texto según el tipo de archivo
@@ -94,7 +110,7 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({
             success: true,
             text: textContent,
-            storagePath: uploadError ? null : storagePath, // Devolver path solo si se subió exitosamente
+            storagePath: storagePath,
             metadata: {
                 name: file.name,
                 type: file.type,

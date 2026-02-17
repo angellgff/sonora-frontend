@@ -15,6 +15,7 @@ import {
   VideoOff,
   Bot,
   ArrowLeft,
+  Download,
 } from "lucide-react";
 import { usePipecatCloud as usePipecat } from "@/hooks/usePipecatCloud";
 import { useVoiceMessages } from "@/hooks/useVoiceMessages";
@@ -58,6 +59,7 @@ export default function ChatPage() {
   const [isUploading, setIsUploading] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
   const [textChatLoading, setTextChatLoading] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
   const router = useRouter();
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder.supabase.co";
   const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || "placeholder";
@@ -294,6 +296,33 @@ export default function ChatPage() {
     if (isInitialized === false) return "Inicializando...";
     if (isConnected) return "Finalizar llamada";
     return "Iniciar llamada";
+  };
+
+  // Exportar conversación como DOCX
+  const handleExportConversation = async () => {
+    if (!selectedConversation?.id || isExporting) return;
+    setIsExporting(true);
+    try {
+      const response = await fetch(`/api/export-conversation?conversationId=${selectedConversation.id}`);
+      if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err.error || "Error al exportar");
+      }
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${(selectedConversation.title || "conversacion").replace(/[^a-zA-Z0-9áéíóúñÁÉÍÓÚÑ\s]/g, "").replace(/\s+/g, "_").substring(0, 50)}.docx`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    } catch (error: any) {
+      console.error("Error exportando:", error);
+      alert(error.message || "Error al exportar la conversación");
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   //crear una nueva conversacion
@@ -611,6 +640,20 @@ export default function ChatPage() {
               <VideoOff className="w-4 h-4" />
             )}
           </Button>
+
+          {/* Boton de descargar conversación */}
+          {selectedConversation?.id && (
+            <Button
+              variant="secondary"
+              size="icon"
+              className={`shrink-0 mr-2 bg-white/5 hover:bg-white/10 text-slate-300 border border-white/10 ${isExporting ? 'opacity-50 animate-pulse' : ''}`}
+              onClick={handleExportConversation}
+              disabled={isExporting}
+              title="Descargar conversación como DOCX"
+            >
+              <Download className="w-4 h-4" />
+            </Button>
+          )}
 
           {/* Boton de llamada */}
           <Button
