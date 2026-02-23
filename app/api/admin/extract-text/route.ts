@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import pdf from "pdf-parse";
 import mammoth from "mammoth";
 import { createClient } from "@supabase/supabase-js";
+import OpenAI from "openai";
 
 // Configuración para Vercel / Next.js
 export const maxDuration = 60;
 export const dynamic = 'force-dynamic';
-export const runtime = 'nodejs'; // Forzar runtime de Node.js para soporte de Buffer y dependencias nativas
+export const runtime = 'nodejs';
 
 function getSupabaseAdmin() {
     const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY;
@@ -18,6 +18,73 @@ function getSupabaseAdmin() {
         serviceRoleKey,
         { auth: { persistSession: false, autoRefreshToken: false } }
     );
+}
+
+// Método 1: Extraer texto con unpdf (rápido, gratis)
+async function extractPdfText(buffer: Buffer): Promise<string> {
+    const { extractText } = await import("unpdf");
+    const data = new Uint8Array(buffer);
+    const result = await extractText(data, { mergePages: false });
+    const text = result.text
+        .map((page: string) => page.trim())
+        .filter((page: string) => page.length > 0)
+        .join('\n\n');
+    return text;
+}
+
+// Método 2: Fallback con OpenAI para PDFs diseñados/escaneados
+async function extractPdfWithOpenAI(buffer: Buffer, fileName: string): Promise<string> {
+    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+    console.log(`🤖 Usando OpenAI para extraer texto de: ${fileName}`);
+
+    // Paso 1: Subir el PDF a OpenAI Files API
+    const file = await openai.files.create({
+        file: new File([new Uint8Array(buffer)], fileName, { type: "application/pdf" }),
+        purpose: "user_data" as any,
+    });
+
+    console.log(`📤 PDF subido a OpenAI: file_id=${file.id}`);
+
+    try {
+        // Paso 2: Usar Responses API con file_id
+        const response = await openai.responses.create({
+            model: "gpt-4o-mini",
+            input: [
+                {
+                    role: "user",
+                    content: [
+                        {
+                            type: "input_file",
+                            file_id: file.id,
+                        } as any,
+                        {
+                            type: "input_text",
+                            text: "Extrae ABSOLUTAMENTE TODO el texto de este documento PDF. Incluye:\n- Nombres completos, títulos, cargos\n- Datos de contacto (email, teléfono, dirección, LinkedIn)\n- TODAS las secciones (experiencia, habilidades, formación, certificados, idiomas, etc.)\n- Fechas, nombres de empresas/instituciones\n- Descripciones de puestos y responsabilidades\n\nResponde SOLO con el texto extraído textualmente, sin resúmenes, sin comentarios, sin formato adicional. Extrae cada sección completa.",
+                        } as any,
+                    ]
+                }
+            ],
+        } as any);
+
+        // Extraer el texto de la respuesta
+        const outputText = (response as any).output_text
+            || (response as any).output
+                ?.filter((item: any) => item.type === "message")
+                ?.map((item: any) => item.content?.filter((c: any) => c.type === "output_text")?.map((c: any) => c.text).join(""))
+                ?.join("")
+            || "";
+
+        return outputText;
+    } finally {
+        // Limpiar: borrar el archivo de OpenAI
+        try {
+            await openai.files.delete(file.id);
+            console.log(`🗑️ Archivo temporal eliminado de OpenAI`);
+        } catch (e) {
+            console.warn(`⚠️ No se pudo eliminar archivo temporal de OpenAI: ${file.id}`);
+        }
+    }
 }
 
 export async function POST(req: NextRequest) {
@@ -59,7 +126,6 @@ export async function POST(req: NextRequest) {
 
             console.error(`⚠️ Error subiendo a Storage (intento ${attempt}/2):`, uploadError);
             if (attempt < 2) {
-                // Esperar 1 segundo antes de reintentar
                 await new Promise(r => setTimeout(r, 1000));
             }
         }
@@ -73,21 +139,24 @@ export async function POST(req: NextRequest) {
         // 2. Extraer Texto según el tipo de archivo
         if (file.type === "application/pdf") {
             try {
-                // Configuración básica con pdf2json
-                const PDFParser = require("pdf2json");
-                const pdfParser = new PDFParser(null, 1); // 1 = Raw Text
+                // Intentar extracción directa primero (rápido, gratis)
+                textContent = await extractPdfText(buffer);
+                console.log(`📄 unpdf extrajo ${textContent.length} caracteres`);
 
-                textContent = await new Promise((resolve, reject) => {
-                    pdfParser.on("pdfParser_dataError", (errData: any) => reject(new Error(errData.parserError)));
-                    pdfParser.on("pdfParser_dataReady", (pdfData: any) => {
-                        resolve(pdfParser.getRawTextContent());
-                    });
-                    pdfParser.parseBuffer(buffer);
-                });
-
+                // Si unpdf no extrajo suficiente texto, usar OpenAI Vision como fallback
+                if (textContent.replace(/\s+/g, " ").trim().length < 50) {
+                    console.log(`⚠️ Texto insuficiente con unpdf, usando OpenAI Vision...`);
+                    textContent = await extractPdfWithOpenAI(buffer, file.name);
+                    console.log(`🤖 OpenAI extrajo ${textContent.length} caracteres`);
+                }
             } catch (pdfError: any) {
-                console.error("❌ Critical PDF Parse Error:", pdfError);
-                throw new Error(`Error interno leyendo el PDF: ${pdfError.message || 'Estructura no soportada'}`);
+                console.error("❌ PDF Parse Error, intentando OpenAI fallback:", pdfError);
+                try {
+                    textContent = await extractPdfWithOpenAI(buffer, file.name);
+                } catch (aiError: any) {
+                    console.error("❌ OpenAI fallback también falló:", aiError);
+                    throw new Error(`No se pudo extraer texto del PDF: ${pdfError.message}`);
+                }
             }
         } else if (
             file.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
@@ -103,8 +172,8 @@ export async function POST(req: NextRequest) {
         // Limpieza básica
         textContent = textContent.replace(/\s+/g, " ").trim();
 
-        if (!textContent) {
-            return NextResponse.json({ error: "El archivo está vacío o no tiene texto legible." }, { status: 400 });
+        if (!textContent || textContent.length < 50) {
+            return NextResponse.json({ error: "El archivo está vacío o no tiene texto legible. Si es un PDF escaneado (imagen), conviértelo a texto primero." }, { status: 400 });
         }
 
         return NextResponse.json({
