@@ -143,6 +143,8 @@ export default function AdminUsersPage() {
                                         placeholder="••••••••"
                                         required
                                         minLength={6}
+                                        autoComplete="new-password"
+                                        name="new-password"
                                         className="w-full px-4 py-2.5 bg-black/20 border border-white/10 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-[#00E599]/50 focus:border-[#00E599]"
                                     />
                                 </div>

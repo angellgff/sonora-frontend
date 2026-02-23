@@ -89,9 +89,11 @@ export function SignUpForm({
               </label>
               <input
                 id="password"
+                name="new-password"
                 type="password"
                 placeholder="Contraseña"
                 required
+                autoComplete="new-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="appearance-none relative block w-full px-4 py-3.5 border border-white/10 bg-black/20 text-slate-100 placeholder-slate-500 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#00E599]/50 focus:border-[#00E599] transition-all sm:text-sm"
@@ -103,9 +105,11 @@ export function SignUpForm({
               </label>
               <input
                 id="repeat-password"
+                name="confirm-password"
                 type="password"
                 placeholder="Confirmar Contraseña"
                 required
+                autoComplete="new-password"
                 value={repeatPassword}
                 onChange={(e) => setRepeatPassword(e.target.value)}
                 className="appearance-none relative block w-full px-4 py-3.5 border border-white/10 bg-black/20 text-slate-100 placeholder-slate-500 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#00E599]/50 focus:border-[#00E599] transition-all sm:text-sm"
