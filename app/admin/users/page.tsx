@@ -10,8 +10,18 @@ type UserProfile = {
     email: string;
     full_name: string | null;
     role: string;
+    pilar_id: number | null;
     created_at: string;
 };
+
+const PILARES = [
+    { id: 1, nombre: "Administración General" },
+    { id: 2, nombre: "Sistema Informático" },
+    { id: 3, nombre: "Ventas y Tribus" },
+    { id: 4, nombre: "Marketing y Comunicación" },
+    { id: 5, nombre: "Legal y Control de Calidad" },
+    { id: 6, nombre: "Contable y Finanzas" },
+];
 
 export default function AdminUsersPage() {
     const [users, setUsers] = useState<UserProfile[]>([]);
@@ -24,6 +34,7 @@ export default function AdminUsersPage() {
     const [password, setPassword] = useState("");
     const [fullName, setFullName] = useState("");
     const [role, setRole] = useState<"user" | "admin">("user");
+    const [pilarId, setPilarId] = useState<number | null>(null);
 
     const supabase = createClient();
 
@@ -55,7 +66,7 @@ export default function AdminUsersPage() {
             const response = await fetch("/api/admin/create-user", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ email, password, fullName, role }),
+                body: JSON.stringify({ email, password, fullName, role, pilarId }),
             });
 
             const data = await response.json();
@@ -66,6 +77,7 @@ export default function AdminUsersPage() {
                 setPassword("");
                 setFullName("");
                 setRole("user");
+                setPilarId(null);
                 loadUsers(); // Recargar lista
             } else {
                 setMessage({ type: "error", text: data.error || "Error al crear usuario" });
@@ -161,6 +173,22 @@ export default function AdminUsersPage() {
                                     </select>
                                 </div>
 
+                                <div>
+                                    <label className="block text-sm text-slate-400 mb-1">Pilar (IA Especializada)</label>
+                                    <select
+                                        value={pilarId || ""}
+                                        onChange={(e) => setPilarId(e.target.value ? parseInt(e.target.value) : null)}
+                                        className="w-full px-4 py-2.5 bg-black/20 border border-white/10 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-[#00E599]/50 focus:border-[#00E599]"
+                                    >
+                                        <option value="">Sin pilar asignado</option>
+                                        {PILARES.map((p) => (
+                                            <option key={p.id} value={p.id}>
+                                                Pilar {p.id} — {p.nombre}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+
                                 {message && (
                                     <div className={`p-3 rounded-xl flex items-center gap-2 text-sm ${message.type === "success"
                                         ? "bg-green-500/10 border border-green-500/20 text-green-400"
@@ -228,13 +256,18 @@ export default function AdminUsersPage() {
                                                     <p className="text-sm text-slate-400 truncate">{user.email}</p>
                                                 </div>
                                             </div>
-                                            <div className="flex items-center ml-11 sm:ml-0">
+                                            <div className="flex items-center gap-2 ml-11 sm:ml-0">
                                                 <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${user.role === "admin"
                                                     ? "bg-amber-500/10 text-amber-400 border border-amber-500/20"
                                                     : "bg-slate-500/10 text-slate-400 border border-slate-500/20"
                                                     }`}>
                                                     {user.role === "admin" ? "Admin" : "Usuario"}
                                                 </span>
+                                                {user.pilar_id && (
+                                                    <span className="px-2.5 py-1 rounded-full text-xs font-medium bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                                                        P{user.pilar_id}
+                                                    </span>
+                                                )}
                                             </div>
                                         </div>
                                     ))}

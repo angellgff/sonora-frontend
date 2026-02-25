@@ -3,7 +3,7 @@
 import { useState, useCallback } from "react";
 
 interface UseTextChatReturn {
-    sendTextMessage: (message: string, conversationId: string, userId: string | null, files?: File[], imageUrls?: string[], cameraImage?: string) => Promise<void>;
+    sendTextMessage: (message: string, conversationId: string, userId: string | null, files?: File[], imageUrls?: string[], cameraImage?: string, pilarId?: number | null) => Promise<void>;
     isLoading: boolean;
     streamingContent: string;
     error: string | null;
@@ -19,7 +19,7 @@ export function useTextChat(
     const [error, setError] = useState<string | null>(null);
 
     const sendTextMessage = useCallback(
-        async (message: string, conversationId: string, userId: string | null, files?: File[], imageUrls?: string[], cameraImage?: string) => {
+        async (message: string, conversationId: string, userId: string | null, files?: File[], imageUrls?: string[], cameraImage?: string, pilarId?: number | null) => {
             if ((!message.trim() && !(files && files.length > 0)) || !conversationId) return;
 
             setIsLoading(true);
@@ -44,6 +44,7 @@ export function useTextChat(
                     if (imageUrls && imageUrls.length > 0) {
                         formData.append("image_urls", imageUrls.join(","));
                     }
+                    if (pilarId) formData.append("pilar_id", pilarId.toString());
 
                     response = await fetch("/api/chat/upload", {
                         method: "POST",
@@ -59,6 +60,7 @@ export function useTextChat(
                             conversationId,
                             userId,
                             cameraImage, // Imagen de cámara en base64
+                            pilarId, // ID del pilar del usuario
                         }),
                     });
                 }

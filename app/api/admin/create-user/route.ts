@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
 
         // 2. Obtener datos del body
         const body = await request.json();
-        const { email, password, fullName, role } = body;
+        const { email, password, fullName, role, pilarId } = body;
 
         // Validaciones
         if (!email || !password) {
@@ -50,6 +50,13 @@ export async function POST(request: NextRequest) {
         if (role && !["user", "admin"].includes(role)) {
             return NextResponse.json(
                 { error: "Rol inválido. Debe ser 'user' o 'admin'" },
+                { status: 400 }
+            );
+        }
+
+        if (pilarId && (pilarId < 1 || pilarId > 6)) {
+            return NextResponse.json(
+                { error: "Pilar inválido. Debe ser entre 1 y 6" },
                 { status: 400 }
             );
         }
@@ -72,18 +79,21 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // 4. Actualizar rol en tabla profiles si es diferente a 'user'
-        if (role === "admin") {
+        // 4. Actualizar perfil (rol y pilar)
+        const profileUpdate: Record<string, any> = {};
+        if (role === "admin") profileUpdate.role = "admin";
+        if (pilarId) profileUpdate.pilar_id = pilarId;
+
+        if (Object.keys(profileUpdate).length > 0) {
             const { error: profileError } = await supabaseAdmin
                 .from("profiles")
-                .update({ role: "admin" })
+                .update(profileUpdate)
                 .eq("id", newUser.user.id);
 
             if (profileError) {
-                console.error("Error creando perfil:", profileError);
-                // No eliminamos el usuario, solo informamos del error
+                console.error("Error actualizando perfil:", profileError);
                 return NextResponse.json(
-                    { error: "Usuario creado pero no se pudo asignar rol admin" },
+                    { error: "Usuario creado pero no se pudo asignar rol/pilar" },
                     { status: 500 }
                 );
             }

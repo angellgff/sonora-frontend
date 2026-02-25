@@ -56,6 +56,7 @@ export default function ChatPage() {
   const [titleGenerated, setTitleGenerated] = useState(false);
   const [deletingConversationId, setDeletingConversationId] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
+  const [pilarId, setPilarId] = useState<number | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
   const [textChatLoading, setTextChatLoading] = useState(false);
@@ -148,6 +149,16 @@ export default function ChatPage() {
       if (user) {
         console.log("Usuario autenticado:", user.id);
         setUserId(user.id);
+        // Obtener pilar_id del perfil
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("pilar_id")
+          .eq("id", user.id)
+          .single();
+        if (profile?.pilar_id) {
+          console.log("Pilar del usuario:", profile.pilar_id);
+          setPilarId(profile.pilar_id);
+        }
       } else {
         console.log("No hay usuario autenticado, redirigiendo...");
       }
@@ -523,7 +534,7 @@ export default function ChatPage() {
       }
 
       // Enviar al API con imagen de cámara si disponible
-      await sendTextChatMessage(messageToSend, targetConversationId!, userId, allFiles.length > 0 ? allFiles : undefined, imageUrls.length > 0 ? imageUrls : undefined, cameraImage);
+      await sendTextChatMessage(messageToSend, targetConversationId!, userId, allFiles.length > 0 ? allFiles : undefined, imageUrls.length > 0 ? imageUrls : undefined, cameraImage, pilarId);
     }
   };
 
