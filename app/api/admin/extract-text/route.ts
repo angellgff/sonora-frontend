@@ -89,6 +89,10 @@ async function extractPdfWithOpenAI(buffer: Buffer, fileName: string): Promise<s
 
 export async function POST(req: NextRequest) {
     console.log(`📥 API Hit: /extract-text - Mem: ${(process.memoryUsage().heapUsed / 1024 / 1024).toFixed(2)} MB`);
+
+    let storagePath: string | null = null;
+    let supabaseAdmin: ReturnType<typeof getSupabaseAdmin> | null = null;
+
     try {
         const formData = await req.formData();
         const file = formData.get("file") as File;
@@ -103,8 +107,8 @@ export async function POST(req: NextRequest) {
         let textContent = "";
 
         // 1. Subir archivo original a Storage para descarga futura
-        const supabaseAdmin = getSupabaseAdmin();
-        const storagePath = `${Date.now()}_${file.name}`;
+        supabaseAdmin = getSupabaseAdmin();
+        storagePath = `${Date.now()}_${file.name}`;
 
         console.log(`📤 Subiendo archivo a Storage: ${storagePath}`);
 
@@ -131,6 +135,7 @@ export async function POST(req: NextRequest) {
         }
 
         if (!storageUploadSuccess) {
+            storagePath = null; // No se subió, no hay que limpiar
             return NextResponse.json({
                 error: "No se pudo subir el archivo a Storage. Por favor intenta de nuevo. Si el problema persiste, verifica que el bucket 'knowledge-files' exista en Supabase."
             }, { status: 500 });
@@ -163,16 +168,22 @@ export async function POST(req: NextRequest) {
         ) {
             const result = await mammoth.extractRawText({ buffer });
             textContent = result.value;
-        } else if (file.type === "text/plain") {
+        } else if (file.type === "text/plain" || file.name.endsWith('.md') || file.name.endsWith('.txt')) {
             textContent = buffer.toString("utf-8");
         } else {
-            return NextResponse.json({ error: "Formato no soportado. Usa PDF, DOCX o TXT." }, { status: 400 });
+            // Rollback: limpiar Storage si ya se subió
+            await supabaseAdmin.storage.from('knowledge-files').remove([storagePath]);
+            storagePath = null;
+            return NextResponse.json({ error: "Formato no soportado. Usa PDF, DOCX, TXT o MD." }, { status: 400 });
         }
 
         // Limpieza básica
         textContent = textContent.replace(/\s+/g, " ").trim();
 
         if (!textContent || textContent.length < 50) {
+            // Rollback: texto insuficiente, limpiar Storage
+            await supabaseAdmin.storage.from('knowledge-files').remove([storagePath]);
+            storagePath = null;
             return NextResponse.json({ error: "El archivo está vacío o no tiene texto legible. Si es un PDF escaneado (imagen), conviértelo a texto primero." }, { status: 400 });
         }
 
@@ -189,6 +200,16 @@ export async function POST(req: NextRequest) {
 
     } catch (error: any) {
         console.error("❌ Error en extracción:", error);
+        // Rollback: limpiar Storage si se subió pero falló la extracción
+        if (storagePath && supabaseAdmin) {
+            try {
+                console.warn('🔄 Rollback: limpiando archivo huérfano de Storage...');
+                await supabaseAdmin.storage.from('knowledge-files').remove([storagePath]);
+                console.log('✅ Storage limpiado tras error de extracción');
+            } catch (cleanupError) {
+                console.error('⚠️ Error limpiando Storage:', cleanupError);
+            }
+        }
         return NextResponse.json({ error: error.message || "Error procesando el archivo" }, { status: 500 });
     }
 }

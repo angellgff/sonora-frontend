@@ -57,6 +57,7 @@ export default function ChatPage() {
   const [deletingConversationId, setDeletingConversationId] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   const [pilarId, setPilarId] = useState<number | null>(null);
+  const [pilarNombre, setPilarNombre] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
   const [textChatLoading, setTextChatLoading] = useState(false);
@@ -158,6 +159,20 @@ export default function ChatPage() {
         if (profile?.pilar_id) {
           console.log("Pilar del usuario:", profile.pilar_id);
           setPilarId(profile.pilar_id);
+          // Nombres estáticos de los 6 pilares
+          const PILAR_NOMBRES: Record<number, string> = {
+            1: "Administración General",
+            2: "Sistema Informático",
+            3: "Ventas y Tribus",
+            4: "Marketing y Comunicación",
+            5: "Legal y Control de Calidad",
+            6: "Contable y Finanzas",
+          };
+          const nombre = PILAR_NOMBRES[profile.pilar_id];
+          if (nombre) {
+            console.log("Nombre del pilar:", nombre);
+            setPilarNombre(nombre);
+          }
         }
       } else {
         console.log("No hay usuario autenticado, redirigiendo...");
@@ -629,7 +644,15 @@ export default function ChatPage() {
                       )}
                     </>
                   ) : (
-                    "En línea"
+                    <>
+                      <span className="w-2 h-2 rounded-full bg-green-500" />
+                      En línea
+                    </>
+                  )}
+                  {pilarNombre && (
+                    <span className="ml-2 px-2 py-0.5 rounded-full bg-[#00E599]/15 text-[#00E599] text-[10px] font-semibold border border-[#00E599]/20 truncate max-w-[150px]">
+                      P{pilarId} · {pilarNombre}
+                    </span>
                   )}
                 </p>
               </div>

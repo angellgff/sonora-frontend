@@ -19,6 +19,8 @@ export default function KnowledgeDashboard() {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadStatus, setUploadStatus] = useState<{ type: 'success' | 'error' | null, message: string }>({ type: null, message: '' });
   const [mounted, setMounted] = useState(false);
+  const [selectedPilarId, setSelectedPilarId] = useState<number | null>(null);
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -152,13 +154,13 @@ export default function KnowledgeDashboard() {
     setIsUploading(true);
     setUploadStatus({ type: null, message: '' });
 
-    // Resetear stats
     let totalChunks = 0;
     let processedChunks = 0;
+    let storagePath: string | null = null; // Para rollback si falla
 
     try {
-      // PASO 1: Extracción de Texto (Rápido)
-      setUploadStatus({ type: null, message: 'Extrayendo texto del documento...' });
+      // PASO 1: Extracción de Texto + subida a Storage
+      setUploadStatus({ type: null, message: 'Subiendo archivo y extrayendo texto...' });
 
       const extractForm = new FormData();
       extractForm.append("file", file);
@@ -169,16 +171,15 @@ export default function KnowledgeDashboard() {
       if (!extractRes.ok) throw new Error(extractData.error || "Error extrayendo texto");
 
       const text = extractData.text;
-      const storagePath = extractData.storagePath; // Path real del archivo en Storage
+      storagePath = extractData.storagePath; // Guardamos para rollback
       if (!text || text.length === 0) throw new Error("Archivo subido pero sin texto legible");
 
       // PASO 2: Chunking en Cliente
       setUploadStatus({ type: null, message: 'Dividiendo información...' });
-      const chunks = splitTextIntoChunks(text, 2000); // 2000 caracteres por chunk (~500 tokens)
+      const chunks = splitTextIntoChunks(text, 2000);
       totalChunks = chunks.length;
 
       // PASO 3: Subida por Lotes (Batch Upload)
-      // Enviaremos lotes de 50 chunks a la vez
       const BATCH_SIZE = 50;
 
       for (let i = 0; i < chunks.length; i += BATCH_SIZE) {
@@ -194,8 +195,9 @@ export default function KnowledgeDashboard() {
           chunks: batch,
           fileName: file.name,
           fileType: file.type,
-          storagePath: storagePath, // Usar el path real devuelto por la API
-          startIndex: i
+          storagePath: storagePath,
+          startIndex: i,
+          pilarId: selectedPilarId,
         };
 
         const saveRes = await fetch("/api/admin/save-chunks", {
@@ -206,7 +208,7 @@ export default function KnowledgeDashboard() {
 
         if (!saveRes.ok) {
           const errorData = await saveRes.json();
-          throw new Error(`Error en lote ${i}: ${errorData.error}`);
+          throw new Error(`Error en lote ${Math.ceil((i + 1) / BATCH_SIZE)}: ${errorData.error}`);
         }
 
         processedChunks += batch.length;
@@ -214,17 +216,38 @@ export default function KnowledgeDashboard() {
 
       setUploadStatus({ type: 'success', message: `¡Éxito! ${processedChunks} fragmentos aprendidos.` });
       setTimeout(() => {
-        setIsUploadModalOpen(false);
+        closeModal();
         loadFiles();
-        setUploadStatus({ type: null, message: '' });
       }, 2000);
 
     } catch (error: any) {
       console.error(error);
+      // ROLLBACK: Si ya se subió a Storage pero falló el guardado en KB, limpiar Storage
+      if (storagePath) {
+        console.warn('🔄 Rollback: limpiando archivo huérfano de Storage...');
+        try {
+          // Limpiar Storage usando la API de delete (también limpia KB por si quedó algo parcial)
+          await fetch("/api/admin/knowledge-files", {
+            method: "DELETE",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ filename: file.name })
+          });
+          console.log('✅ Rollback completado: Storage y KB limpiados');
+        } catch (cleanupError) {
+          console.error('❌ Error durante rollback:', cleanupError);
+        }
+      }
       setUploadStatus({ type: 'error', message: error.message || "Error desconocido" });
     } finally {
       setIsUploading(false);
     }
+  };
+
+  const closeModal = () => {
+    setIsUploadModalOpen(false);
+    setPendingFile(null);
+    setSelectedPilarId(null);
+    setUploadStatus({ type: null, message: '' });
   };
 
   // -- Componente Visual --
@@ -376,50 +399,112 @@ export default function KnowledgeDashboard() {
       {isUploadModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
           <div className="bg-[#0F172A] border border-white/10 rounded-2xl w-full max-w-lg shadow-2xl relative overflow-hidden">
-            <button onClick={() => setIsUploadModalOpen(false)} className="absolute top-4 right-4 text-slate-400 hover:text-white"><X /></button>
+            <button onClick={() => closeModal()} className="absolute top-4 right-4 text-slate-400 hover:text-white" disabled={isUploading}><X /></button>
 
-            <div className="p-8 text-center">
-              <h2 className="text-2xl font-bold text-white mb-2">Añadir Conocimiento</h2>
-              <p className="text-slate-400 text-sm mb-6">Sube archivos para expandir la memoria del bot.</p>
+            <div className="p-8">
+              <h2 className="text-2xl font-bold text-white mb-2 text-center">Añadir Conocimiento</h2>
+              <p className="text-slate-400 text-sm mb-5 text-center">Sube archivos para expandir la memoria del bot.</p>
 
-              {/* ZONA DE CARGA REUTILIZADA */}
+              {/* Paso 1: Seleccionar Pilar */}
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-slate-300 mb-1.5">¿A qué pilar pertenece este documento?</label>
+                <select
+                  value={selectedPilarId ?? ""}
+                  onChange={(e) => setSelectedPilarId(e.target.value ? Number(e.target.value) : null)}
+                  className="w-full px-3 py-2.5 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#00E599]/50 focus:border-[#00E599]/50"
+                  disabled={isUploading}
+                >
+                  <option value="" className="bg-[#0F172A]">🌐 Global (visible para todos)</option>
+                  <option value="1" className="bg-[#0F172A]">P1 — Administración General</option>
+                  <option value="2" className="bg-[#0F172A]">P2 — Sistema Informático</option>
+                  <option value="3" className="bg-[#0F172A]">P3 — Ventas y Tribus</option>
+                  <option value="4" className="bg-[#0F172A]">P4 — Marketing y Comunicación</option>
+                  <option value="5" className="bg-[#0F172A]">P5 — Legal y Control de Calidad</option>
+                  <option value="6" className="bg-[#0F172A]">P6 — Contable y Finanzas</option>
+                </select>
+              </div>
+
+              {/* Paso 2: Seleccionar Archivo */}
               <div
                 className={`
-                      relative rounded-xl border-2 border-dashed transition-all duration-300 p-10
-                      flex flex-col items-center justify-center cursor-pointer
-                      ${isUploading ? 'pointer-events-none opacity-50' : 'hover:border-[#00E599]/50 hover:bg-[#00E599]/5 border-white/10 bg-black/20'}
-                    `}
+                  relative rounded-xl border-2 border-dashed transition-all duration-300 p-6
+                  flex flex-col items-center justify-center cursor-pointer
+                  ${isUploading ? 'pointer-events-none opacity-50' : 'hover:border-[#00E599]/50 hover:bg-[#00E599]/5 border-white/10 bg-black/20'}
+                  ${pendingFile ? 'border-[#00E599]/30 bg-[#00E599]/5' : ''}
+                `}
                 onClick={() => !isUploading && fileInputRef.current?.click()}
               >
-                <input type="file" ref={fileInputRef} className="hidden" accept=".pdf,.docx,.txt" onChange={(e) => e.target.files?.[0] && handleFileUpload(e.target.files[0])} />
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  className="hidden"
+                  accept=".pdf,.docx,.txt,.md"
+                  onChange={(e) => {
+                    if (e.target.files?.[0]) {
+                      setPendingFile(e.target.files[0]);
+                      setUploadStatus({ type: null, message: '' });
+                    }
+                  }}
+                />
 
                 {isUploading ? (
-                  <Loader2 className="w-12 h-12 text-[#00E599] animate-spin" />
+                  <Loader2 className="w-10 h-10 text-[#00E599] animate-spin" />
+                ) : pendingFile ? (
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-[#00E599]/10 border border-[#00E599]/20 flex items-center justify-center">
+                      <FileText className="w-5 h-5 text-[#00E599]" />
+                    </div>
+                    <div className="text-left">
+                      <p className="text-sm font-medium text-white truncate max-w-[250px]">{pendingFile.name}</p>
+                      <p className="text-xs text-slate-400">{(pendingFile.size / 1024).toFixed(0)} KB — Click para cambiar</p>
+                    </div>
+                  </div>
                 ) : (
-                  <Upload className="w-12 h-12 text-[#00E599] mb-4" />
-                )}
-                <p className="text-sm font-medium text-slate-300 mt-2">
-                  {isUploading ? "Memorizando documento..." : "Click para seleccionar"}
-                </p>
-                {isUploading && (
-                  <p className="text-xs text-slate-500 mt-2 animate-pulse">
-                    Archivos grandes pueden tardar hasta 1 minuto. No cierres esta ventana.
-                  </p>
+                  <>
+                    <Upload className="w-10 h-10 text-[#00E599] mb-3" />
+                    <p className="text-sm font-medium text-slate-300">Click para seleccionar archivo</p>
+                    <p className="text-xs text-slate-500 mt-1">PDF, DOCX, TXT o MD</p>
+                  </>
                 )}
               </div>
 
-              {/* Mensajes de Estado */}
-              {uploadStatus.message && (
-                <div className={`mt-4 p-3 rounded-lg text-sm font-medium flex items-center justify-center gap-2 ${uploadStatus.type === 'success' ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'
-                  }`}>
+              {/* Paso 3: Botón Subir */}
+              {pendingFile && !isUploading && uploadStatus.type !== 'success' && (
+                <button
+                  onClick={() => handleFileUpload(pendingFile)}
+                  className="w-full mt-4 py-3 rounded-xl bg-[#00E599] text-slate-900 font-bold text-sm hover:shadow-[0_0_30px_rgba(0,229,153,0.4)] hover:-translate-y-0.5 transition-all flex items-center justify-center gap-2"
+                >
+                  <Upload className="w-4 h-4" />
+                  Subir y Memorizar
+                </button>
+              )}
+
+              {/* Estado del proceso */}
+              {isUploading && uploadStatus.message && (
+                <div className="mt-4 p-3 rounded-lg text-sm font-medium flex items-center justify-center gap-2 bg-blue-500/10 text-blue-400">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  {uploadStatus.message}
+                </div>
+              )}
+
+              {/* Mensajes de Éxito/Error */}
+              {!isUploading && uploadStatus.message && uploadStatus.type && (
+                <div className={`mt-4 p-3 rounded-lg text-sm font-medium flex items-center justify-center gap-2 ${uploadStatus.type === 'success' ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'}`}>
                   {uploadStatus.type === 'success' ? <CheckCircle className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
                   {uploadStatus.message}
                 </div>
+              )}
+
+              {isUploading && (
+                <p className="text-xs text-slate-500 mt-3 text-center animate-pulse">
+                  Archivos grandes pueden tardar hasta 1 minuto. No cierres esta ventana.
+                </p>
               )}
             </div>
           </div>
         </div>
       )}
+
     </div>
   );
 }

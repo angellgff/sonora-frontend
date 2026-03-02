@@ -62,7 +62,7 @@ Responde SOLO en formato JSON: {"summary": "...", "keywords": ["...", "..."]}`
 export async function POST(req: NextRequest) {
     try {
         const body = await req.json();
-        const { chunks, fileName, fileType, storagePath, startIndex } = body;
+        const { chunks, fileName, fileType, storagePath, startIndex, pilarId } = body;
 
         if (!chunks || !Array.isArray(chunks) || chunks.length === 0) {
             return NextResponse.json({ error: "No se recibieron chunks válidos" }, { status: 400 });
@@ -140,6 +140,21 @@ export async function POST(req: NextRequest) {
 
         const failed = results.find((r: any) => r.error);
         if (failed) throw failed.error;
+
+        // 4. Si se indicó pilarId, actualizar los chunks recién insertados
+        if (pilarId && pilarId >= 1 && pilarId <= 6) {
+            console.log(`🏛️ Asignando pilar_id=${pilarId} a chunks de "${fileName}"...`);
+            const { error: updateError } = await supabaseAdmin
+                .from('knowledge_base')
+                .update({ pilar_id: pilarId })
+                .eq('document_name', fileName)
+                .is('pilar_id', null);
+            if (updateError) {
+                console.warn('⚠️ Error asignando pilar_id:', updateError.message);
+            } else {
+                console.log(`✅ pilar_id=${pilarId} asignado correctamente`);
+            }
+        }
 
         return NextResponse.json({
             success: true,
