@@ -19,6 +19,14 @@ export default function ProfilePage() {
     const fileInputRef = useRef<HTMLInputElement>(null);
     const router = useRouter();
 
+    // Auto-dismiss toast after 3 seconds
+    useEffect(() => {
+        if (status.message) {
+            const timer = setTimeout(() => setStatus({ type: null, message: '' }), 3000);
+            return () => clearTimeout(timer);
+        }
+    }, [status.message]);
+
     // Supabase Client
     const supabase = createBrowserClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,

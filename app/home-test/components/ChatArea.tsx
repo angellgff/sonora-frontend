@@ -103,14 +103,22 @@ export function ChatArea({
     isTyping = false,
 }: ChatAreaProps) {
     const messagesEndRef = React.useRef<HTMLDivElement>(null);
+    const containerRef = React.useRef<HTMLDivElement>(null);
 
-    // Auto-scroll al fondo cuando cambian los mensajes
+    // Auto-scroll: only if user is near the bottom (not scrolled up reading)
     React.useEffect(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    }, [messages]);
+        const container = containerRef.current;
+        if (!container) return;
+
+        const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 150;
+        if (isNearBottom) {
+            // Use instant scroll during streaming to avoid animation queue-up
+            messagesEndRef.current?.scrollIntoView({ behavior: "instant" });
+        }
+    }, [messages, isTyping]);
 
     return (
-        <div className="flex-1 min-h-0 overflow-y-auto p-3 md:p-4 space-y-4 md:space-y-6 custom-scrollbar">
+        <div ref={containerRef} className="flex-1 min-h-0 overflow-y-auto p-3 md:p-4 space-y-4 md:space-y-6 custom-scrollbar">
             {/* Estado vacío: sin conversación seleccionada */}
             {!hasSelectedConversation && messages.length === 0 && (
                 <div className="flex flex-col items-center justify-center h-full text-center p-8">

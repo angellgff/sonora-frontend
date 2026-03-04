@@ -28,6 +28,7 @@ import { deleteConversation } from "@/app/actions/conversations/conversations";
 import { createBrowserClient } from "@supabase/ssr";
 import { useRouter } from "next/navigation";
 import { compressImageToBase64 } from "../_helpers/imageUtils";
+import { useBackendHealth } from "@/hooks/useBackendHealth";
 
 export const dynamic = 'force-dynamic';
 
@@ -63,6 +64,7 @@ export default function ChatPage() {
   const [textChatLoading, setTextChatLoading] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const router = useRouter();
+  const { status: backendStatus } = useBackendHealth(15000);
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder.supabase.co";
   const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || "placeholder";
   const supabase = createBrowserClient(supabaseUrl, supabaseKey);
@@ -642,6 +644,16 @@ export default function ChatPage() {
                       ) : (
                         <span className="text-[#00E599] font-medium">Te escucho...</span>
                       )}
+                    </>
+                  ) : backendStatus === "disconnected" ? (
+                    <>
+                      <span className="w-2 h-2 rounded-full bg-red-500" />
+                      <span className="text-red-400 font-medium">Sin conexión</span>
+                    </>
+                  ) : backendStatus === "checking" ? (
+                    <>
+                      <span className="w-2 h-2 rounded-full bg-yellow-400 animate-pulse" />
+                      Verificando...
                     </>
                   ) : (
                     <>

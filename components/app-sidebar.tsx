@@ -14,6 +14,7 @@ import {
     ChevronRight,
     LogOut,
     Shield,
+    Activity,
 } from "lucide-react";
 
 interface NavItem {
@@ -51,6 +52,12 @@ const navItems: NavItem[] = [
         icon: <Users className="w-5 h-5" />,
         adminOnly: true,
     },
+    {
+        href: "/admin/pilares",
+        label: "Semáforo",
+        icon: <Activity className="w-5 h-5" />,
+        adminOnly: true,
+    },
 ];
 
 export default function AppSidebar() {
@@ -67,11 +74,6 @@ export default function AppSidebar() {
 
     useEffect(() => {
         setMounted(true);
-
-        // Load saved sidebar state (default: collapsed)
-        const saved = localStorage.getItem("sidebar-collapsed");
-        if (saved !== null) setCollapsed(JSON.parse(saved));
-        // If no saved state, default stays true (collapsed)
 
         // Get user role
         const fetchRole = async () => {
@@ -90,10 +92,16 @@ export default function AppSidebar() {
         fetchRole();
     }, []);
 
-    const toggleCollapsed = () => {
-        const next = !collapsed;
-        setCollapsed(next);
-        localStorage.setItem("sidebar-collapsed", JSON.stringify(next));
+    // Desktop: hover to expand, leave to collapse
+    const hoverTimeout = React.useRef<NodeJS.Timeout | null>(null);
+
+    const handleMouseEnter = () => {
+        if (hoverTimeout.current) clearTimeout(hoverTimeout.current);
+        setCollapsed(false);
+    };
+
+    const handleMouseLeave = () => {
+        hoverTimeout.current = setTimeout(() => setCollapsed(true), 200);
     };
 
     const handleLogout = async () => {
@@ -134,6 +142,8 @@ export default function AppSidebar() {
 
             {/* Sidebar */}
             <aside
+                onMouseEnter={handleMouseEnter}
+                onMouseLeave={handleMouseLeave}
                 className={`
           fixed top-0 left-0 z-50 h-full
           bg-[#060D17]/95 backdrop-blur-xl
@@ -215,21 +225,7 @@ export default function AppSidebar() {
 
                 {/* Bottom actions */}
                 <div className="p-2 border-t border-white/5 space-y-1">
-                    {/* Collapse toggle (desktop only) */}
-                    <button
-                        onClick={toggleCollapsed}
-                        className="hidden md:flex w-full items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-500 hover:text-slate-300 hover:bg-white/5 transition-all"
-                        title={collapsed ? "Expandir" : "Colapsar"}
-                    >
-                        {collapsed ? (
-                            <ChevronRight className="w-5 h-5 shrink-0" />
-                        ) : (
-                            <>
-                                <ChevronLeft className="w-5 h-5 shrink-0" />
-                                <span>Colapsar</span>
-                            </>
-                        )}
-                    </button>
+
 
                     {/* Logout */}
                     <button

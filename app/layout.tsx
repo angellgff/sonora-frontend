@@ -9,13 +9,19 @@ const defaultUrl = process.env.VERCEL_URL
 
 export const metadata: Metadata = {
   metadataBase: new URL(defaultUrl),
-  title: "Sonora 1411sas",
-  description: "Asistente de Red Futura",
+  title: "Sonora — Asistente IA del Ecosistema Red Futura",
+  description: "Plataforma de inteligencia artificial para la gestión integral del Ecosistema Red Futura. Chat inteligente, base de conocimiento y administración por pilares.",
+  openGraph: {
+    title: "Sonora — Asistente IA",
+    description: "Plataforma de inteligencia artificial para la gestión integral del Ecosistema Red Futura.",
+    siteName: "Sonora",
+    locale: "es_AR",
+    type: "website",
+  },
   icons: {
     icon: "/favicon.ico",
     shortcut: "/favicon.ico",
     apple: "/favicon.ico",
-
   },
 };
 
@@ -30,7 +36,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="es" suppressHydrationWarning>
       <body className={`${inter.className} antialiased`}>
         <ThemeProvider
           attribute="class"
