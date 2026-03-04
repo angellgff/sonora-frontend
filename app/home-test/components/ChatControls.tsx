@@ -1,8 +1,28 @@
-import React, { useRef, useState } from "react";
+import React, { useRef, useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Mic, Paperclip, Send, X } from "lucide-react";
+import { Mic, Paperclip, Send, X, FileText, FileSpreadsheet } from "lucide-react";
 import Image from "next/image";
+
+// Helper: icono y color por tipo de archivo
+function getFileIcon(fileName: string) {
+    const ext = fileName.toLowerCase().split('.').pop() || '';
+    switch (ext) {
+        case 'pdf': return { icon: '📕', label: 'PDF', color: 'bg-red-500/20 border-red-500/30 text-red-400' };
+        case 'doc':
+        case 'docx': return { icon: '📘', label: 'DOCX', color: 'bg-blue-500/20 border-blue-500/30 text-blue-400' };
+        case 'txt': return { icon: '📝', label: 'TXT', color: 'bg-slate-500/20 border-slate-500/30 text-slate-400' };
+        case 'md': return { icon: '📋', label: 'MD', color: 'bg-purple-500/20 border-purple-500/30 text-purple-400' };
+        case 'json': return { icon: '📊', label: 'JSON', color: 'bg-yellow-500/20 border-yellow-500/30 text-yellow-400' };
+        default: return { icon: '📄', label: ext.toUpperCase(), color: 'bg-slate-500/20 border-slate-500/30 text-slate-400' };
+    }
+}
+
+function formatFileSize(bytes: number): string {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
 
 interface ChatControlsProps {
     message: string;
@@ -28,6 +48,12 @@ export function ChatControls({
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
     const [selectedTextFile, setSelectedTextFile] = useState<File | null>(null);
+
+    // Crear URLs estables para las previews y limpiarlas al desmontar
+    const previewUrls = useMemo(() => selectedFiles.map(f => URL.createObjectURL(f)), [selectedFiles]);
+    useEffect(() => {
+        return () => { previewUrls.forEach(url => URL.revokeObjectURL(url)); };
+    }, [previewUrls]);
 
     const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files) {
@@ -78,33 +104,56 @@ export function ChatControls({
             <div className="max-w-4xl mx-auto">
                 {/* Previsualización de imágenes seleccionadas */}
                 {selectedFiles.length > 0 && (
-                    <div className="flex gap-2 mb-2 overflow-x-auto pb-2">
-                        {selectedFiles.map((file, index) => (
-                            <div key={index} className="relative w-20 h-20 shrink-0 group">
-                                <Image
-                                    src={URL.createObjectURL(file)}
-                                    alt="Preview"
-                                    fill
-                                    className="object-cover rounded-xl border border-white/10"
-                                />
-                                <button
-                                    onClick={() => removeFile(index)}
-                                    className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-all hover:scale-110 shadow-lg"
-                                >
-                                    <X className="w-3 h-3" />
-                                </button>
-                            </div>
-                        ))}
+                    <div className="mb-3">
+                        {/* Badge con conteo */}
+                        <div className="flex items-center justify-between mb-2">
+                            <span className="text-xs font-medium text-slate-400">
+                                📷 {selectedFiles.length}/3 imágenes seleccionadas
+                            </span>
+                            <button
+                                onClick={() => setSelectedFiles([])}
+                                className="text-xs text-red-400 hover:text-red-300 transition-colors"
+                            >
+                                Quitar todas
+                            </button>
+                        </div>
+                        <div className="flex gap-3 overflow-x-auto pb-1">
+                            {selectedFiles.map((file, index) => (
+                                <div key={index} className="relative shrink-0 flex flex-col items-center gap-1">
+                                    <div className="relative w-24 h-24 rounded-xl overflow-hidden border-2 border-white/10 hover:border-[#00E599]/30 transition-colors">
+                                        <Image
+                                            src={previewUrls[index]}
+                                            alt={file.name}
+                                            fill
+                                            className="object-cover"
+                                        />
+                                        <button
+                                            onClick={() => removeFile(index)}
+                                            className="absolute top-1 right-1 bg-black/70 hover:bg-red-500 text-white rounded-full p-1 transition-colors shadow-lg"
+                                        >
+                                            <X className="w-3.5 h-3.5" />
+                                        </button>
+                                    </div>
+                                    <span className="text-[10px] text-slate-500 truncate max-w-[96px]">{file.name}</span>
+                                </div>
+                            ))}
+                        </div>
                     </div>
                 )}
+
+                {/* Previsualización de archivo de texto */}
                 {selectedTextFile && (
-                    <div className="flex items-center gap-2 bg-blue-500/20 px-3 py-1 rounded-full text-sm">
-                        <span>{selectedTextFile.name}</span>
+                    <div className={`flex items-center gap-3 mb-3 px-3 py-2.5 rounded-xl border ${getFileIcon(selectedTextFile.name).color}`}>
+                        <span className="text-xl">{getFileIcon(selectedTextFile.name).icon}</span>
+                        <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium truncate">{selectedTextFile.name}</p>
+                            <p className="text-[11px] opacity-70">{getFileIcon(selectedTextFile.name).label} · {formatFileSize(selectedTextFile.size)}</p>
+                        </div>
                         <button
                             onClick={() => setSelectedTextFile(null)}
-                            className="hover:text-red-400"
+                            className="p-1 rounded-full hover:bg-white/10 transition-colors"
                         >
-                            X
+                            <X className="w-4 h-4" />
                         </button>
                     </div>
                 )}
