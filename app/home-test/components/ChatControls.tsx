@@ -163,7 +163,8 @@ export function ChatControls({
                     <Button
                         variant="ghost"
                         size="icon"
-                        className={`shrink-0 h-10 w-10 md:h-12 md:w-12 rounded-xl border transition-all duration-300 ${isRecording
+                        aria-label={isRecording ? "Detener grabación" : "Grabar audio"}
+                        className={`shrink-0 h-11 w-11 md:h-12 md:w-12 rounded-xl border transition-all duration-300 ${isRecording
                             ? "bg-red-500/20 border-red-500/50 text-red-500 animate-pulse"
                             : "bg-white/5 border-white/10 text-slate-400 hover:text-white hover:bg-white/10"
                             }`}
@@ -188,7 +189,8 @@ export function ChatControls({
                     <Button
                         variant="ghost"
                         size="icon"
-                        className={`shrink-0 h-10 w-10 md:h-12 md:w-12 rounded-xl border border-transparent hover:bg-white/5 text-slate-400 hover:text-[#00E599] transition-colors ${selectedFiles.length >= 3 ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        aria-label="Adjuntar archivo"
+                        className={`shrink-0 h-11 w-11 md:h-12 md:w-12 rounded-xl border border-transparent hover:bg-white/5 text-slate-400 hover:text-[#00E599] transition-colors ${selectedFiles.length >= 3 ? 'opacity-50 cursor-not-allowed' : ''}`}
                         disabled={isUploading || selectedFiles.length >= 3}
                         onClick={() => fileInputRef.current?.click()}
                     >
@@ -202,7 +204,7 @@ export function ChatControls({
                             value={message}
                             onChange={(e) => onMessageChange(e.target.value)}
                             onKeyDown={handleKeyDownWrapper}
-                            className="h-10 md:h-12 text-sm md:text-base bg-black/20 border-white/10 focus:border-[#00E599]/50 focus:ring-[#00E599]/20 text-slate-200 placeholder:text-slate-500 rounded-xl"
+                            className="h-11 md:h-12 text-sm md:text-base bg-black/20 border-white/10 focus:border-[#00E599]/50 focus:ring-[#00E599]/20 text-slate-200 placeholder:text-slate-500 rounded-xl"
                             disabled={isRecording || isConnected}
                         />
                     </div>
@@ -211,7 +213,8 @@ export function ChatControls({
                     <Button
                         variant="ghost"
                         size="icon"
-                        className={`shrink-0 h-10 w-10 md:h-12 md:w-12 rounded-xl transition-all duration-300 ${(!message.trim() && selectedFiles.length === 0 && !selectedTextFile) || isRecording
+                        aria-label="Enviar mensaje"
+                        className={`shrink-0 h-11 w-11 md:h-12 md:w-12 rounded-xl transition-all duration-300 ${(!message.trim() && selectedFiles.length === 0 && !selectedTextFile) || isRecording
                             ? "bg-white/5 text-slate-600 cursor-not-allowed"
                             : "bg-[#00E599] text-slate-900 hover:bg-[#00E599]/90 hover:scale-105 shadow-[0_0_15px_rgba(0,229,153,0.3)]"
                             }`}

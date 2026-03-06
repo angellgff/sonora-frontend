@@ -395,10 +395,6 @@ export default function ChatPage() {
   const handleDeleteConversation = React.useCallback(async (conversationId: string, e: React.MouseEvent) => {
     e.stopPropagation();
 
-    if (!confirm("Estas seguro de que quieres eliminar esta conversacion?")) {
-      return;
-    }
-
     try {
       setDeletingConversationId(conversationId);
       await deleteConversation(conversationId);
@@ -602,6 +598,7 @@ export default function ChatPage() {
               size="icon"
               onClick={() => router.push("/dashboard")} // Volver a "casa"
               className="shrink-0 mr-2 text-slate-400 hover:text-[#00E599] hover:bg-white/5"
+              aria-label="Volver al Dashboard"
               title="Volver al Dashboard"
             >
               <ArrowLeft className="w-5 h-5" />
@@ -609,6 +606,7 @@ export default function ChatPage() {
             <Button
               variant="ghost"
               size="icon"
+              aria-label="Abrir historial"
               onClick={() => setSidebarOpen(true)}
               className="shrink-0 lg:hidden text-slate-400 hover:text-white"
             >
@@ -617,6 +615,7 @@ export default function ChatPage() {
             <Button
               variant="ghost"
               size="icon"
+              aria-label={sidebarOpen ? "Cerrar historial" : "Abrir historial"}
               onClick={() => setSidebarOpen(!sidebarOpen)}
               className="hidden lg:flex shrink-0 text-slate-400 hover:text-white hover:bg-white/5"
             >
@@ -675,10 +674,11 @@ export default function ChatPage() {
           <Button
             variant="secondary"
             size="icon"
+            aria-label={isCameraOn ? "Apagar cámara" : "Encender cámara"}
             className={`shrink-0 mr-2 bg-white/5 hover:bg-white/10 text-slate-300 border border-white/10 ${!isInitialized ? 'opacity-50 cursor-not-allowed' : ''}`}
             onClick={toggleCamera}
             disabled={!isInitialized}
-            title={isCameraOn ? "Apagar camara" : "Encender camara"}
+            title={isCameraOn ? "Apagar cámara" : "Encender cámara"}
           >
             {isCameraOn ? (
               <Video className="w-4 h-4" />
@@ -692,6 +692,7 @@ export default function ChatPage() {
             <Button
               variant="secondary"
               size="icon"
+              aria-label="Descargar conversación"
               className={`shrink-0 mr-2 bg-white/5 hover:bg-white/10 text-slate-300 border border-white/10 ${isExporting ? 'opacity-50 animate-pulse' : ''}`}
               onClick={handleExportConversation}
               disabled={isExporting}
@@ -705,6 +706,7 @@ export default function ChatPage() {
           <Button
             variant="default"
             size="icon"
+            aria-label={isConnected ? "Colgar llamada" : "Iniciar llamada"}
             className={`shrink-0 ${isConnected
               ? "bg-red-500/20 text-red-400 hover:bg-red-500/30 border border-red-500/50"
               : "bg-[#00E599] text-slate-900 hover:bg-[#00E599]/90 font-bold shadow-[0_0_15px_rgba(0,229,153,0.3)]"

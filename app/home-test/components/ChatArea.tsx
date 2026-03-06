@@ -1,6 +1,7 @@
 import React from "react";
 import ReactMarkdown from "react-markdown";
 import { Card } from "@/components/ui/card";
+import { ChatMessagesSkeleton } from "@/components/ui/skeleton";
 import { MessageSquare, Bot, User } from "lucide-react";
 
 // Definimos la interfaz Message aquí o la importamos si está en un archivo común
@@ -136,12 +137,7 @@ export function ChatArea({
 
             {/* Estado de carga */}
             {isLoading && (
-                <div className="flex items-center justify-center h-full">
-                    <div className="text-center">
-                        <div className="w-8 h-8 rounded-full border-2 border-[#00E599] border-t-transparent animate-spin mx-auto mb-3" />
-                        <p className="text-xs text-[#00E599] font-medium tracking-wide uppercase">Cargando...</p>
-                    </div>
-                </div>
+                <ChatMessagesSkeleton />
             )}
 
             {/* Mensajes */}

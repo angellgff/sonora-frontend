@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { MessageSquare, X, Plus, Trash2, LogOut } from "lucide-react";
@@ -28,6 +28,9 @@ export function ChatSidebar({
     onLogout,
     deletingId,
 }: ChatSidebarProps) {
+    const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+    const confirmConv = conversations.find(c => c?.id === confirmDeleteId);
+
     return (
         <>
             {/* Backdrop para móvil */}
@@ -50,6 +53,7 @@ export function ChatSidebar({
                     <Button
                         variant="ghost"
                         size="icon"
+                        aria-label="Cerrar historial"
                         onClick={onClose}
                         className="lg:hidden text-slate-400 hover:text-white"
                     >
@@ -99,10 +103,11 @@ export function ChatSidebar({
                                 <Button
                                     variant="ghost"
                                     size="icon"
+                                    aria-label="Eliminar conversación"
                                     className="absolute top-2 right-2 h-7 w-7 opacity-0 group-hover:opacity-100 transition-all bg-black/20 hover:bg-red-500 hover:text-white rounded-lg"
                                     onClick={(e) => {
                                         e.stopPropagation();
-                                        if (conv?.id) onDelete(conv.id, e);
+                                        if (conv?.id) setConfirmDeleteId(conv.id);
                                     }}
                                     disabled={deletingId === conv?.id}
                                     title="Eliminar conversación"
@@ -134,6 +139,38 @@ export function ChatSidebar({
                     </Button>
                 </div>
             </aside>
+
+            {/* Modal de confirmación para eliminar */}
+            {confirmDeleteId && (
+                <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 backdrop-blur-sm">
+                    <div className="bg-[#0A1628] border border-white/10 rounded-2xl p-6 max-w-sm w-[90%] shadow-2xl">
+                        <h3 className="text-white font-bold text-lg mb-2">¿Eliminar conversación?</h3>
+                        <p className="text-slate-400 text-sm mb-1">Esta acción no se puede deshacer.</p>
+                        {confirmConv && (
+                            <p className="text-slate-500 text-xs mb-5 truncate">
+                                &ldquo;{confirmConv.title}&rdquo;
+                            </p>
+                        )}
+                        <div className="flex gap-3">
+                            <button
+                                onClick={() => setConfirmDeleteId(null)}
+                                className="flex-1 py-2.5 rounded-xl bg-white/5 border border-white/10 text-slate-300 text-sm font-medium hover:bg-white/10 transition-colors"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                onClick={(e) => {
+                                    onDelete(confirmDeleteId, e as any);
+                                    setConfirmDeleteId(null);
+                                }}
+                                className="flex-1 py-2.5 rounded-xl bg-red-500 text-white text-sm font-bold hover:bg-red-600 transition-colors"
+                            >
+                                Eliminar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
             <style jsx global>{`
                 .custom-scrollbar::-webkit-scrollbar {
                     width: 4px;

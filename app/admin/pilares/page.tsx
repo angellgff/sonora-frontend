@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import AppSidebar from "@/components/app-sidebar";
 import { Activity, RefreshCw } from "lucide-react";
+import { PilarCardSkeleton } from "@/components/ui/skeleton";
 
 interface Pilar {
     id: number;
@@ -98,8 +99,13 @@ export default function PilaresSemaphore() {
                     )}
 
                     {loading ? (
-                        <div className="flex items-center justify-center py-20">
-                            <div className="w-8 h-8 border-2 border-[#00E599] border-t-transparent rounded-full animate-spin" />
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 py-4">
+                            <PilarCardSkeleton />
+                            <PilarCardSkeleton />
+                            <PilarCardSkeleton />
+                            <PilarCardSkeleton />
+                            <PilarCardSkeleton />
+                            <PilarCardSkeleton />
                         </div>
                     ) : (
                         <>
@@ -171,8 +177,8 @@ export default function PilaresSemaphore() {
                                                         onClick={() => updateStatus(pilar.id, opt.value)}
                                                         disabled={isUpdating || pilar.status === opt.value}
                                                         className={`flex-1 py-1.5 rounded-lg text-center text-xs font-medium transition-all ${pilar.status === opt.value
-                                                                ? "ring-2 ring-white/30 scale-105"
-                                                                : "hover:scale-105 opacity-60 hover:opacity-100"
+                                                            ? "ring-2 ring-white/30 scale-105"
+                                                            : "hover:scale-105 opacity-60 hover:opacity-100"
                                                             } ${opt.color}`}
                                                         title={opt.label}
                                                     >

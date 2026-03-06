@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Users, UserPlus, Shield, User, Loader2, CheckCircle, XCircle } from "lucide-react";
 import AppSidebar from "@/components/app-sidebar";
+import { UserRowSkeleton } from "@/components/ui/skeleton";
 
 type UserProfile = {
     id: string;
@@ -226,8 +227,11 @@ export default function AdminUsersPage() {
                             </div>
 
                             {isLoading ? (
-                                <div className="flex items-center justify-center py-12">
-                                    <Loader2 className="w-8 h-8 animate-spin text-[#00E599]" />
+                                <div className="space-y-1">
+                                    <UserRowSkeleton />
+                                    <UserRowSkeleton />
+                                    <UserRowSkeleton />
+                                    <UserRowSkeleton />
                                 </div>
                             ) : users.length === 0 ? (
                                 <div className="text-center py-12 text-slate-400">

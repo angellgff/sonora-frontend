@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { createBrowserClient } from "@supabase/ssr";
 import { useRouter } from "next/navigation";
 import { Camera, User, Mail, Shield, Save, Loader2, CheckCircle, AlertCircle } from "lucide-react";
+import { ProfileSkeleton } from "@/components/ui/skeleton";
 import Image from "next/image";
 import AppSidebar from "@/components/app-sidebar";
 
@@ -129,8 +130,8 @@ export default function ProfilePage() {
 
     if (loading) {
         return (
-            <div className="min-h-screen bg-[#050B14] flex items-center justify-center">
-                <Loader2 className="w-8 h-8 text-[#00E599] animate-spin" />
+            <div className="min-h-screen bg-[#050B14]">
+                <ProfileSkeleton />
             </div>
         );
     }
