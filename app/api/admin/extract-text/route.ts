@@ -9,15 +9,20 @@ export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
 function getSupabaseAdmin() {
-    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY;
-    if (!serviceRoleKey || !process.env.NEXT_PUBLIC_SUPABASE_URL) {
-        throw new Error("❌ CONFIG ERROR: Faltan variables de entorno de Supabase.");
+    try {
+        const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY;
+        if (!serviceRoleKey || !process.env.NEXT_PUBLIC_SUPABASE_URL) {
+            throw new Error("❌ CONFIG ERROR: Faltan variables de entorno de Supabase.");
+        }
+        return createClient(
+            process.env.NEXT_PUBLIC_SUPABASE_URL,
+            serviceRoleKey,
+            { auth: { persistSession: false, autoRefreshToken: false } }
+        );
+    } catch (error) {
+        console.error("Error inicializando Supabase Admin:", error);
+        throw error;
     }
-    return createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL,
-        serviceRoleKey,
-        { auth: { persistSession: false, autoRefreshToken: false } }
-    );
 }
 
 // Método 1: Extraer texto con unpdf (rápido, gratis)
@@ -107,8 +112,15 @@ export async function POST(req: NextRequest) {
         let textContent = "";
 
         // 1. Subir archivo original a Storage para descarga futura
-        supabaseAdmin = getSupabaseAdmin();
-        storagePath = `${Date.now()}_${file.name}`;
+        try {
+            supabaseAdmin = getSupabaseAdmin();
+        } catch (initError: any) {
+            return NextResponse.json({ error: "Error de configuración de BD en el servidor. Revisa las variables de entorno." }, { status: 500 });
+        }
+        
+        // Limpiar nombre de archivo para evitar "Invalid key" de Supabase Storage
+        const sanitizedFileName = file.name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9.\-_]/g, "_");
+        storagePath = `${Date.now()}_${sanitizedFileName}`;
 
         console.log(`📤 Subiendo archivo a Storage: ${storagePath}`);
 

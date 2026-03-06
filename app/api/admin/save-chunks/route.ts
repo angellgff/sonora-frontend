@@ -6,15 +6,20 @@ export const maxDuration = 60;
 export const dynamic = 'force-dynamic';
 
 function getSupabaseAdmin() {
-    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY;
-    if (!serviceRoleKey || !process.env.NEXT_PUBLIC_SUPABASE_URL) {
-        throw new Error("❌ CONFIG ERROR: Faltan variables de entorno de Supabase.");
+    try {
+        const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY;
+        if (!serviceRoleKey || !process.env.NEXT_PUBLIC_SUPABASE_URL) {
+            throw new Error("❌ CONFIG ERROR: Faltan variables de entorno de Supabase.");
+        }
+        return createClient(
+            process.env.NEXT_PUBLIC_SUPABASE_URL,
+            serviceRoleKey,
+            { auth: { persistSession: false, autoRefreshToken: false } }
+        );
+    } catch (error) {
+        console.error("Error inicializando Supabase Admin:", error);
+        throw error;
     }
-    return createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL,
-        serviceRoleKey,
-        { auth: { persistSession: false, autoRefreshToken: false } }
-    );
 }
 
 function getOpenAI() {
@@ -70,7 +75,13 @@ export async function POST(req: NextRequest) {
 
         console.log(`⚡ Procesando lote de ${chunks.length} chunks (Inicio: ${startIndex})...`);
 
-        const supabaseAdmin = getSupabaseAdmin();
+        let supabaseAdmin;
+        try {
+            supabaseAdmin = getSupabaseAdmin();
+        } catch (initError: any) {
+            return NextResponse.json({ error: "Error de configuración de BD en el servidor. Revisa las variables de entorno." }, { status: 500 });
+        }
+        
         const openai = getOpenAI();
 
         // 1. Generar Embeddings en lote
@@ -107,39 +118,44 @@ export async function POST(req: NextRequest) {
 
         console.log(`✅ Metadata enriquecida en ${Date.now() - metadataStart}ms`);
 
-        // 3. Insertar en paralelo a Supabase
+        // 3. Insertar en paralelo a Supabase pero por pequeños baches
         console.log("🗄️ Insertando en Supabase...");
         const dbStart = Date.now();
+        const INSERT_BATCH_SIZE = 10;
 
-        const insertPromises = chunks.map((chunk: string, idx: number) => {
-            const embedding = embeddings[idx];
-            const globalIndex = startIndex + idx;
-            const enriched = enrichedMetadata[idx] || { summary: "", keywords: [] };
+        for (let i = 0; i < chunks.length; i += INSERT_BATCH_SIZE) {
+            const batchChunks = chunks.slice(i, i + INSERT_BATCH_SIZE);
+            
+            const insertPromises = batchChunks.map((chunk: string, batchIdx: number) => {
+                const idx = i + batchIdx;
+                const embedding = embeddings[idx];
+                const globalIndex = startIndex + idx;
+                const enriched = enrichedMetadata[idx] || { summary: "", keywords: [] };
 
-            // Metadata enriquecida
-            const metadata = {
-                original_file: fileName,
-                storage_path: storagePath,
-                batch_index: idx,
-                summary: enriched.summary,
-                keywords: enriched.keywords
-            };
+                const metadata = {
+                    original_file: fileName,
+                    storage_path: storagePath,
+                    batch_index: idx,
+                    summary: enriched.summary,
+                    keywords: enriched.keywords
+                };
 
-            return supabaseAdmin.rpc("insert_knowledge_chunk", {
-                p_document_name: fileName,
-                p_document_type: fileType,
-                p_chunk_text: chunk,
-                p_chunk_index: globalIndex,
-                p_embedding: embedding,
-                p_metadata: metadata
+                return supabaseAdmin.rpc("insert_knowledge_chunk", {
+                    p_document_name: fileName,
+                    p_document_type: fileType,
+                    p_chunk_text: chunk,
+                    p_chunk_index: globalIndex,
+                    p_embedding: embedding,
+                    p_metadata: metadata
+                });
             });
-        });
 
-        const results = await Promise.all(insertPromises);
+            const results = await Promise.all(insertPromises);
+            const failed = results.find((r: any) => r.error);
+            if (failed) throw failed.error;
+        }
+
         console.log(`✅ Supabase insert completado en ${Date.now() - dbStart}ms`);
-
-        const failed = results.find((r: any) => r.error);
-        if (failed) throw failed.error;
 
         // 4. Si se indicó pilarId, actualizar los chunks recién insertados
         if (pilarId && pilarId >= 1 && pilarId <= 6) {
