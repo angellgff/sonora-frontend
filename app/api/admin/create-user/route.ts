@@ -21,23 +21,23 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // Verificar rol admin
+        // Verificar rol admin (Pilar 1)
         const { data: profile } = await supabase
             .from("profiles")
-            .select("role")
+            .select("pilar_id")
             .eq("id", user.id)
             .single();
 
-        if (profile?.role !== "admin") {
+        if (profile?.pilar_id !== 1) {
             return NextResponse.json(
-                { error: "Solo los administradores pueden crear usuarios" },
+                { error: "Solo los administradores (Pilar 1) pueden crear usuarios" },
                 { status: 403 }
             );
         }
 
         // 2. Obtener datos del body
         const body = await request.json();
-        const { email, password, fullName, role, pilarId } = body;
+        const { email, password, fullName, pilarId } = body;
 
         // Validaciones
         if (!email || !password) {
@@ -47,16 +47,9 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        if (role && !["user", "admin"].includes(role)) {
+        if (!pilarId || pilarId < 1 || pilarId > 6) {
             return NextResponse.json(
-                { error: "Rol inválido. Debe ser 'user' o 'admin'" },
-                { status: 400 }
-            );
-        }
-
-        if (pilarId && (pilarId < 1 || pilarId > 6)) {
-            return NextResponse.json(
-                { error: "Pilar inválido. Debe ser entre 1 y 6" },
+                { error: "Pilar obligatorio e inválido. Debe ser entre 1 y 6" },
                 { status: 400 }
             );
         }
@@ -79,24 +72,20 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // 4. Actualizar perfil (rol y pilar)
-        const profileUpdate: Record<string, any> = {};
-        if (role === "admin") profileUpdate.role = "admin";
-        if (pilarId) profileUpdate.pilar_id = pilarId;
+        // 4. Actualizar perfil (asignar pilar)
+        const profileUpdate: Record<string, any> = { pilar_id: pilarId };
 
-        if (Object.keys(profileUpdate).length > 0) {
-            const { error: profileError } = await supabaseAdmin
-                .from("profiles")
-                .update(profileUpdate)
-                .eq("id", newUser.user.id);
+        const { error: profileError } = await supabaseAdmin
+            .from("profiles")
+            .update(profileUpdate)
+            .eq("id", newUser.user.id);
 
-            if (profileError) {
-                console.error("Error actualizando perfil:", profileError);
-                return NextResponse.json(
-                    { error: "Usuario creado pero no se pudo asignar rol/pilar" },
-                    { status: 500 }
-                );
-            }
+        if (profileError) {
+            console.error("Error actualizando perfil:", profileError);
+            return NextResponse.json(
+                { error: "Usuario creado pero no se pudo asignar el pilar" },
+                { status: 500 }
+            );
         }
 
         // 5. Retornar éxito
@@ -106,7 +95,7 @@ export async function POST(request: NextRequest) {
             user: {
                 id: newUser.user.id,
                 email: newUser.user.email,
-                role: role || "user",
+                pilar_id: pilarId,
             },
         });
 

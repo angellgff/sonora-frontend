@@ -8,27 +8,26 @@ export default async function UserDashboard() {
 
   const { data: { user } } = await supabase.auth.getUser();
 
-  let role = 'user';
-  let fullName = '';
+  let pilarId: number | null = null;
+  let fullName = user?.user_metadata?.full_name || '';
   let pilarNombre = '';
   if (user) {
     const { data: profile } = await supabase
       .from('profiles')
-      .select('role, full_name, pilar_id')
+      .select('pilar_id')
       .eq('id', user.id)
       .single();
     if (profile) {
-      role = profile.role;
-      fullName = profile.full_name || '';
+      pilarId = profile.pilar_id;
       const PILAR_NOMBRES: Record<number, string> = {
         1: "Administración General", 2: "Sistema Informático", 3: "Ventas y Tribus",
         4: "Marketing y Comunicación", 5: "Legal y Control de Calidad", 6: "Contable y Finanzas",
       };
-      pilarNombre = profile.pilar_id ? PILAR_NOMBRES[profile.pilar_id] || '' : '';
+      pilarNombre = pilarId ? PILAR_NOMBRES[pilarId] || '' : '';
     }
   }
 
-  const isAdmin = role === 'admin';
+  const isAdmin = pilarId === 1;
 
   // Fetch quick stats for admin
   let totalConversations = 0;

@@ -14,7 +14,7 @@ export default function ProfilePage() {
     const [saving, setSaving] = useState(false);
     const [fullName, setFullName] = useState("");
     const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
-    const [role, setRole] = useState("user");
+    const [pilarId, setPilarId] = useState<number | null>(null);
     const [status, setStatus] = useState<{ type: 'success' | 'error' | null, message: string }>({ type: null, message: '' });
 
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -49,14 +49,14 @@ export default function ProfilePage() {
             setFullName(user.user_metadata?.full_name || "");
             setAvatarUrl(user.user_metadata?.avatar_url || null);
 
-            // Fetch Role
+            // Fetch Pilar
             const { data: profile } = await supabase
                 .from('profiles')
-                .select('role')
+                .select('pilar_id')
                 .eq('id', user.id)
                 .single();
 
-            if (profile) setRole(profile.role);
+            if (profile) setPilarId(profile.pilar_id);
 
             setLoading(false);
         };
@@ -187,8 +187,8 @@ export default function ProfilePage() {
                         <p className="mt-4 text-sm font-medium text-slate-300">
                             {fullName || "Usuario sin nombre"}
                         </p>
-                        <span className={`mt-1 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide border ${role === 'admin' ? 'bg-purple-500/10 border-purple-500/20 text-purple-400' : 'bg-slate-500/10 border-slate-500/20 text-slate-400'}`}>
-                            {role.toUpperCase()}
+                        <span className={`mt-1 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide border ${pilarId === 1 ? 'bg-purple-500/10 border-purple-500/20 text-purple-400' : 'bg-slate-500/10 border-slate-500/20 text-slate-400'}`}>
+                            {pilarId ? `Pilar ${pilarId}` : "Sin Pilar"}
                         </span>
                     </div>
 
