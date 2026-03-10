@@ -26,7 +26,8 @@ import type { Conversation } from "@/app/actions/conversations/types";
 import { serializeMessagesToUI } from "@/app/actions/messages/serializers";
 import { deleteConversation } from "@/app/actions/conversations/conversations";
 import { createBrowserClient } from "@supabase/ssr";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense } from "react";
 import { compressImageToBase64 } from "../_helpers/imageUtils";
 import { useBackendHealth } from "@/hooks/useBackendHealth";
 
@@ -42,6 +43,17 @@ type Message = {
 };
 
 export default function ChatPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-[#060D17] flex items-center justify-center text-[#00E599]">Cargando chat...</div>}>
+      <ChatContent />
+    </Suspense>
+  )
+}
+
+function ChatContent() {
+  const searchParams = useSearchParams();
+  const urlAgentId = searchParams.get("agentId");
+  
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
@@ -59,6 +71,15 @@ export default function ChatPage() {
   const [userId, setUserId] = useState<string | null>(null);
   const [pilarId, setPilarId] = useState<number | null>(null);
   const [pilarNombre, setPilarNombre] = useState<string | null>(null);
+  const [agents, setAgents] = useState<{ id: string, name: string, assistant_id: string }[]>([]);
+  // Usar el URL param como fuente de verdad
+  const [agentId, setSelectedAgentId] = useState<string | null>(urlAgentId);
+
+  // Re-sincronizar si cambia la URL
+  useEffect(() => {
+    setSelectedAgentId(urlAgentId);
+  }, [urlAgentId]);
+
   const [isUploading, setIsUploading] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
   const [textChatLoading, setTextChatLoading] = useState(false);
@@ -73,8 +94,8 @@ export default function ChatPage() {
     conversations: conversationsList,
     loadConversations,
     updateLastConversationTitle,
-    saveConversation,
-  } = useConversation();
+    saveConversation: saveNewHookConversation, // Rename to avoid collision
+  } = useConversation(agentId);
 
   const {
     messages: dbMessages,
@@ -178,6 +199,12 @@ export default function ChatPage() {
         }
       } else {
         console.log("No hay usuario autenticado, redirigiendo...");
+      }
+
+      // Cargar Agentes Especializados disponibles
+      const { data: agentsData } = await supabase.from("custom_agents").select("id, name, assistant_id").order("created_at", { ascending: false });
+      if (agentsData) {
+        setAgents(agentsData);
       }
     };
     getUser();
@@ -288,7 +315,7 @@ export default function ChatPage() {
 
         if (!targetConversationId) {
           console.log("Creando conversacion antes de conectar...");
-          const newId = await saveConversation();
+          const newId = await saveNewHookConversation(); // CORREGIDO AQUÍ
           if (newId) {
             targetConversationId = newId;
             console.log("Conversacion creada con ID:", newId);
@@ -488,8 +515,8 @@ export default function ChatPage() {
       let targetConversationId = selectedConversation?.id;
       // Si no hay conversacion, crear una nueva
       if (!targetConversationId) {
-        console.log("📝 Creando conversacion para chat de texto...");
-        const newId = await saveConversation();
+        console.log("📝 Creando conversacion para chat de texto con agentId:", agentId);
+        const newId = await saveNewHookConversation(); // Usar el hook con contexto
         if (newId) {
           targetConversationId = newId;
           setSelectedConversation({
@@ -547,7 +574,8 @@ export default function ChatPage() {
       }
 
       // Enviar al API con imagen de cámara si disponible
-      await sendTextChatMessage(messageToSend, targetConversationId!, userId, allFiles.length > 0 ? allFiles : undefined, imageUrls.length > 0 ? imageUrls : undefined, cameraImage, pilarId);
+      const currentAgentToSend = agentId || null;
+      await sendTextChatMessage(messageToSend, targetConversationId!, userId, allFiles.length > 0 ? allFiles : undefined, imageUrls.length > 0 ? imageUrls : undefined, cameraImage, pilarId, currentAgentToSend);
     }
   };
 
@@ -669,8 +697,11 @@ export default function ChatPage() {
               </div>
             </div>
           </div>
+          
+          <div className="flex items-center gap-2 md:gap-3 shrink-0">
+             
 
-          {/* Boton de Camara (Siempre visible) */}
+            {/* Boton de Camara (Siempre visible) */}
           <Button
             variant="secondary"
             size="icon"
@@ -721,6 +752,7 @@ export default function ChatPage() {
             )}
             <span className="hidden md:inline ml-2">{getCallButtonText()}</span>
           </Button>
+          </div>
         </header>
 
         {/* Indicador de reconexión: Solo si hay historial real */}

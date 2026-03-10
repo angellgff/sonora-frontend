@@ -12,7 +12,7 @@ import { Conversation } from "@/app/actions/conversations/types";
 import { generateTitle } from "@/app/_helpers/generateTitle";
 import { createBrowserClient } from "@supabase/ssr";
 
-export function useConversation() {
+export function useConversation(agentId?: string | null) {
   const [isPending, startTransition] = useTransition();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -34,7 +34,6 @@ export function useConversation() {
     getUser();
   }, []);
 
-  // Cargar conversaciones
   const loadConversations = useCallback(() => {
     if (!userId) return;
 
@@ -42,20 +41,26 @@ export function useConversation() {
     startTransition(async () => {
       try {
         const data = await getConversationsWithLastMessage(userId);
-        console.log("🔍 Conversaciones cargadas:", data.map((c: Conversation) => ({
+        const filteredData = data.filter((c: any) => {
+           const cAgentId = c.metadata?.agent_id;
+           if (agentId) return cAgentId === agentId;
+           return !cAgentId;
+        });
+
+        console.log("🔍 Conversaciones cargadas:", filteredData.map((c: Conversation) => ({
           id: c.id,
           title: c.title,
           last_msg: c.last_message_text,
           time: c.last_message_created_at
         })));
-        setConversations(data || []);
+        setConversations(filteredData || []);
       } catch (error) {
         console.error("Error getting conversations:", error);
         setError("Error al cargar conversaciones");
         setConversations([]);
       }
     });
-  }, [userId]);
+  }, [userId, agentId]);
 
   const saveNewConversation = useCallback(async (title?: string) => {
     if (!userId) return null;
@@ -67,6 +72,7 @@ export function useConversation() {
         title:
           title ||
           `Conversación del ${new Date().toLocaleDateString("es-MX")}`,
+        metadata: agentId ? { agent_id: agentId } : {},
       }, userId);
 
       const successMessage = conversationId
@@ -76,7 +82,12 @@ export function useConversation() {
       startTransition(async () => {
         setSuccess(successMessage);
         const data = await getConversationsWithLastMessage(userId);
-        setConversations(data || []);
+        const filteredData = data.filter((c: any) => {
+           const cAgentId = c.metadata?.agent_id;
+           if (agentId) return cAgentId === agentId;
+           return !cAgentId;
+        });
+        setConversations(filteredData || []);
       });
 
       setTimeout(() => setSuccess(null), 3000);
@@ -87,7 +98,7 @@ export function useConversation() {
       setError("Error al guardar la conversación");
       return null;
     }
-  }, [userId]);
+  }, [userId, agentId]);
 
   // Obtener y actualizar la última conversación del usuario
   const updateLastConversationTitle = useCallback((firstMessage: string) => {
@@ -99,7 +110,7 @@ export function useConversation() {
       try {
         console.log("🔍 Buscando última conversación...");
         // Busca la última conversación
-        const data = await getLastConversationWithUser(userId);
+        const data = await getLastConversationWithUser(userId, agentId);
         console.log("📋 Conversación encontrada:", data);
 
         if (data) {
@@ -120,8 +131,12 @@ export function useConversation() {
           // Recarga la lista
           console.log("🔄 Recargando lista de conversaciones...");
           const updatedData = await getConversationsWithLastMessage(userId);
-          console.log("📊 Conversaciones actualizadas:", updatedData);
-          setConversations(updatedData || []);
+          const filteredData = updatedData.filter((c: any) => {
+             const cAgentId = c.metadata?.agent_id;
+             if (agentId) return cAgentId === agentId;
+             return !cAgentId;
+          });
+          setConversations(filteredData || []);
 
           setTimeout(() => setSuccess(null), 3000);
           return data.id;
@@ -136,7 +151,7 @@ export function useConversation() {
         return null;
       }
     });
-  }, [userId]);
+  }, [userId, agentId]);
 
   // Limpiar mensajes de estado
   const clearMessages = useCallback(() => {

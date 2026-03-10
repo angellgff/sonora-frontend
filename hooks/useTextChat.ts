@@ -3,7 +3,7 @@
 import { useState, useCallback } from "react";
 
 interface UseTextChatReturn {
-    sendTextMessage: (message: string, conversationId: string, userId: string | null, files?: File[], imageUrls?: string[], cameraImage?: string, pilarId?: number | null) => Promise<void>;
+    sendTextMessage: (message: string, conversationId: string, userId: string | null, files?: File[], imageUrls?: string[], cameraImage?: string, pilarId?: number | null, agentId?: string | null) => Promise<void>;
     isLoading: boolean;
     streamingContent: string;
     error: string | null;
@@ -19,7 +19,7 @@ export function useTextChat(
     const [error, setError] = useState<string | null>(null);
 
     const sendTextMessage = useCallback(
-        async (message: string, conversationId: string, userId: string | null, files?: File[], imageUrls?: string[], cameraImage?: string, pilarId?: number | null) => {
+        async (message: string, conversationId: string, userId: string | null, files?: File[], imageUrls?: string[], cameraImage?: string, pilarId?: number | null, agentId?: string | null) => {
             if ((!message.trim() && !(files && files.length > 0)) || !conversationId) return;
 
             setIsLoading(true);
@@ -45,6 +45,7 @@ export function useTextChat(
                         formData.append("image_urls", imageUrls.join(","));
                     }
                     if (pilarId) formData.append("pilar_id", pilarId.toString());
+                    if (agentId) formData.append("agent_id", agentId);
 
                     response = await fetch("/api/chat/upload", {
                         method: "POST",
@@ -52,6 +53,7 @@ export function useTextChat(
                     });
                 } else {
                     // chat de texto normal
+                    console.log("🚀 Payload a Next.js /api/chat:", { message, conversationId, agentId });
                     response = await fetch("/api/chat", {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
@@ -61,6 +63,7 @@ export function useTextChat(
                             userId,
                             cameraImage, // Imagen de cámara en base64
                             pilarId, // ID del pilar del usuario
+                            agentId, // ID del agente especializado seleccionado
                         }),
                     });
                 }

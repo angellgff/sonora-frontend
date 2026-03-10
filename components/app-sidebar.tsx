@@ -15,6 +15,7 @@ import {
     LogOut,
     Shield,
     Activity,
+    Bot,
 } from "lucide-react";
 
 interface NavItem {
@@ -58,6 +59,12 @@ const navItems: NavItem[] = [
         icon: <Activity className="w-5 h-5" />,
         adminOnly: true,
     },
+    {
+        href: "/admin/agentes",
+        label: "Fábrica Agentes",
+        icon: <Bot className="w-5 h-5" />,
+        adminOnly: true,
+    },
 ];
 
 export default function AppSidebar() {
@@ -65,6 +72,7 @@ export default function AppSidebar() {
     const [collapsed, setCollapsed] = useState(true);
     const [mobileOpen, setMobileOpen] = useState(false);
     const [role, setRole] = useState<string>("user");
+    const [agents, setAgents] = useState<{id: string, name: string, assistant_id: string}[]>([]);
     const [mounted, setMounted] = useState(false);
 
     const supabase = createBrowserClient(

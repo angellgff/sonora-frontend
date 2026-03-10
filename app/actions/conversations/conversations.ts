@@ -27,6 +27,7 @@ export async function saveConversation(conversation: Conversation, userId?: stri
       .insert({
         user_id: targetUserId,
         title: conversation.title,
+        metadata: conversation.metadata || {}
       })
       .select("id")
       .single();
@@ -91,27 +92,51 @@ export async function getConversationsWithLastMessage(userId?: string) {
     );
 
     if (error) throw new Error(error.message);
+    if (!data || data.length === 0) return [];
 
-    return data || [];
+    // Fetch metadata for these conversations
+    const { data: convsData } = await supabase
+      .from("conversations")
+      .select("id, metadata")
+      .in("id", data.map((c: any) => c.id));
+
+    // Merge metadata
+    const mergedData = data.map((c: any) => {
+      const match = convsData?.find((m) => m.id === c.id);
+      return {
+        ...c,
+        metadata: match?.metadata || {}
+      };
+    });
+
+    return mergedData;
   } catch (error) {
     console.error("Error getting conversations with messages:", error);
     throw new Error("Failed to get conversations with messages");
   }
 }
 
-export async function getLastConversationWithUser(userId?: string) {
+export async function getLastConversationWithUser(userId?: string, agentId?: string | null) {
   try {
     const targetUserId = await resolveUserId(userId);
     if (!targetUserId) return null;
 
-    console.log("🔍 Buscando última conversación para usuario:", targetUserId);
+    console.log("🔍 Buscando última conversación para usuario:", targetUserId, "Agent ID:", agentId);
 
     const supabase = await createClient();
-    const { data, error } = await supabase
+    let query = supabase
       .from("conversations")
       .select("*")
       .eq("user_id", targetUserId)
-      .is("deleted_at", null)
+      .is("deleted_at", null);
+
+    if (agentId) {
+      query = query.eq("metadata->>agent_id", agentId);
+    } else {
+      query = query.is("metadata->>agent_id", null);
+    }
+
+    const { data, error } = await query
       .order("created_at", { ascending: false })
       .limit(1);
 

@@ -5,11 +5,13 @@ const PIPECAT_CHAT_URL = process.env.PIPECAT_CHAT_URL || "http://localhost:7861/
 export async function POST(req: NextRequest) {
     try {
         const body = await req.json();
-        const { message, conversationId, userId, cameraImage, pilarId } = body;
+        const { message, conversationId, userId, cameraImage, pilarId, agentId } = body;
 
         if (!message || !conversationId) {
             return NextResponse.json({ error: "Faltan campos requeridos" }, { status: 400 });
         }
+
+        console.log("🌐 Proxy Next.js recibio agentId:", agentId);
 
         const response = await fetch(PIPECAT_CHAT_URL, {
             method: "POST",
@@ -20,6 +22,7 @@ export async function POST(req: NextRequest) {
                 user_id: userId,
                 camera_image: cameraImage, // Imagen de cámara para ver_camara
                 pilar_id: pilarId, // ID del pilar del usuario
+                agent_id: agentId, // ID del asistente especializado si aplica
             }),
         });
 

@@ -5,4 +5,5 @@ export interface Conversation {
   last_message_role?: string;
   last_message_type?: string;
   last_message_created_at?: string;
+  metadata?: Record<string, any>;
 }
