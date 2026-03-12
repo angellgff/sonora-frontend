@@ -24,6 +24,7 @@ export default function KnowledgeDashboard() {
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { showToast } = useToast();
+  const [confirmDeleteFilename, setConfirmDeleteFilename] = useState<string | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -47,9 +48,11 @@ export default function KnowledgeDashboard() {
     loadFiles();
   }, []);
 
-  // Función Borrar
-  const handleDelete = async (filename: string) => {
-    if (!confirm(`¿Estás SEGURO de eliminar "${filename}"?\nSe borrarán permanentemente sus recuerdos asociados.`)) return;
+  // Función Borrar (ejecuta la eliminación real)
+  const confirmDelete = async () => {
+    if (!confirmDeleteFilename) return;
+    const filename = confirmDeleteFilename;
+    setConfirmDeleteFilename(null);
 
     try {
       const res = await fetch("/api/admin/knowledge-files", {
@@ -61,7 +64,7 @@ export default function KnowledgeDashboard() {
       const data = await res.json();
       if (data.success) {
         showToast("success", "Archivo eliminado correctamente");
-        loadFiles(); // Recargar lista
+        loadFiles();
       }
     } catch (error) {
       showToast("error", "Error eliminando archivo");
@@ -344,7 +347,7 @@ export default function KnowledgeDashboard() {
                         <Download className="w-4 h-4" />
                       </button>
                       <button
-                        onClick={() => handleDelete(file.name)}
+                        onClick={() => setConfirmDeleteFilename(file.name)}
                         className="p-1.5 rounded-lg text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition-all"
                         title="Eliminar"
                       >
@@ -381,7 +384,7 @@ export default function KnowledgeDashboard() {
                         <Download className="w-5 h-5" />
                       </button>
                       <button
-                        onClick={() => handleDelete(file.name)}
+                        onClick={() => setConfirmDeleteFilename(file.name)}
                         className="p-2 rounded-lg text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition-all"
                         title="Eliminar memoria"
                       >
@@ -502,6 +505,35 @@ export default function KnowledgeDashboard() {
                   Archivos grandes pueden tardar hasta 1 minuto. No cierres esta ventana.
                 </p>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de confirmación para eliminar archivo */}
+      {confirmDeleteFilename && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 backdrop-blur-sm">
+          <div className="bg-[#0A1628] border border-white/10 rounded-2xl p-6 max-w-sm w-[90%] shadow-2xl">
+            <h3 className="text-white font-bold text-lg mb-2">¿Eliminar archivo?</h3>
+            <p className="text-slate-400 text-sm mb-1">
+              Esta acción no se puede deshacer. Se borrarán permanentemente sus recuerdos asociados.
+            </p>
+            <p className="text-slate-500 text-xs mb-5 truncate">
+              &ldquo;{confirmDeleteFilename}&rdquo;
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setConfirmDeleteFilename(null)}
+                className="flex-1 py-2.5 rounded-xl bg-white/5 border border-white/10 text-slate-300 text-sm font-medium hover:bg-white/10 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={confirmDelete}
+                className="flex-1 py-2.5 rounded-xl bg-red-500 text-white text-sm font-bold hover:bg-red-600 transition-colors"
+              >
+                Eliminar
+              </button>
             </div>
           </div>
         </div>

@@ -16,6 +16,7 @@ import {
     Shield,
     Activity,
     Bot,
+    BarChart3,
 } from "lucide-react";
 
 interface NavItem {
@@ -40,6 +41,12 @@ const navItems: NavItem[] = [
         href: "/profile",
         label: "Mi Perfil",
         icon: <User className="w-5 h-5" />,
+    },
+    {
+        href: "/admin/tablero",
+        label: "Tablero",
+        icon: <BarChart3 className="w-5 h-5" />,
+        adminOnly: true,
     },
     {
         href: "/admin/knowledge",
