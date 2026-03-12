@@ -46,8 +46,8 @@ export async function updateSession(request: NextRequest) {
   }
 
   if (user) {
-    const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single();
-    const role = profile?.role || 'user';
+    const { data: profile } = await supabase.from('profiles').select('pilar_id').eq('id', user.id).single();
+    const pilarId = profile?.pilar_id ?? null;
 
     if (
       request.nextUrl.pathname === "/auth/login" ||
@@ -59,7 +59,7 @@ export async function updateSession(request: NextRequest) {
     }
 
     if (request.nextUrl.pathname.startsWith("/admin")) {
-      if (role !== 'admin') {
+      if (pilarId !== 1) {
         const url = request.nextUrl.clone();
         url.pathname = "/dashboard";
         return NextResponse.redirect(url);

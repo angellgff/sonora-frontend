@@ -71,7 +71,7 @@ export default function AppSidebar() {
     const pathname = usePathname();
     const [collapsed, setCollapsed] = useState(true);
     const [mobileOpen, setMobileOpen] = useState(false);
-    const [role, setRole] = useState<string>("user");
+    const [pilarId, setPilarId] = useState<number | null>(null);
     const [agents, setAgents] = useState<{id: string, name: string, assistant_id: string}[]>([]);
     const [mounted, setMounted] = useState(false);
 
@@ -83,21 +83,21 @@ export default function AppSidebar() {
     useEffect(() => {
         setMounted(true);
 
-        // Get user role
-        const fetchRole = async () => {
+        // Get user pilar
+        const fetchPilar = async () => {
             const {
                 data: { user },
             } = await supabase.auth.getUser();
             if (user) {
                 const { data: profile } = await supabase
                     .from("profiles")
-                    .select("role")
+                    .select("pilar_id")
                     .eq("id", user.id)
                     .single();
-                if (profile) setRole(profile.role);
+                if (profile) setPilarId(profile.pilar_id);
             }
         };
-        fetchRole();
+        fetchPilar();
     }, []);
 
     // Desktop: hover to expand, leave to collapse
@@ -117,7 +117,7 @@ export default function AppSidebar() {
         window.location.href = "/auth/login";
     };
 
-    const isAdmin = role === "admin";
+    const isAdmin = pilarId === 1;
     const filteredItems = navItems.filter(
         (item) => !item.adminOnly || isAdmin
     );

@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { MessageSquare, X, Plus, Trash2, LogOut } from "lucide-react";
+import { MessageSquare, X, Plus, Trash2, LogOut, Search } from "lucide-react";
 import { formatDate } from "@/app/_helpers/formatDate";
 import type { Conversation } from "@/app/actions/conversations/types";
 
@@ -29,7 +29,15 @@ export function ChatSidebar({
     deletingId,
 }: ChatSidebarProps) {
     const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+    const [searchQuery, setSearchQuery] = useState("");
     const confirmConv = conversations.find(c => c?.id === confirmDeleteId);
+
+    const filteredConversations = searchQuery.trim()
+        ? conversations.filter(c =>
+            c?.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            c?.last_message_text?.toLowerCase().includes(searchQuery.toLowerCase())
+        )
+        : conversations;
 
     return (
         <>
@@ -61,7 +69,7 @@ export function ChatSidebar({
                     </Button>
                 </div>
 
-                <div className="p-4">
+                <div className="p-4 space-y-3">
                     <Button
                         className="w-full justify-start gap-2 cursor-pointer bg-[#00E599] text-slate-900 font-bold hover:bg-[#00E599]/90 shadow-[0_0_15px_rgba(0,229,153,0.15)] hover:shadow-[0_0_25px_rgba(0,229,153,0.3)] transition-all rounded-xl py-6"
                         variant="default"
@@ -70,14 +78,36 @@ export function ChatSidebar({
                         <Plus className="w-5 h-5" />
                         Nueva Conversación
                     </Button>
+
+                    {/* Barra de búsqueda */}
+                    <div className="relative">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                        <input
+                            type="text"
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            placeholder="Buscar conversación..."
+                            className="w-full pl-9 pr-3 py-2.5 bg-white/5 border border-white/10 rounded-xl text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-[#00E599]/50 focus:border-[#00E599]/30 transition-all"
+                        />
+                        {searchQuery && (
+                            <button
+                                onClick={() => setSearchQuery("")}
+                                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white transition-colors"
+                            >
+                                <X className="w-3.5 h-3.5" />
+                            </button>
+                        )}
+                    </div>
                 </div>
 
                 <div className="flex-1 overflow-y-auto p-3 space-y-3 custom-scrollbar">
                     {/* Sección "Hoy" u organizada cronológicamente en el futuro */}
-                    <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider px-2">Recientes</p>
+                    <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider px-2">
+                        {searchQuery ? `Resultados (${filteredConversations.length})` : "Recientes"}
+                    </p>
 
                     <div className="space-y-2">
-                        {conversations.map((conv) => (
+                        {filteredConversations.map((conv) => (
                             <div
                                 key={conv?.id}
                                 className={`group p-3.5 rounded-xl cursor-pointer transition-all relative border ${selectedId === conv?.id
@@ -117,12 +147,14 @@ export function ChatSidebar({
                             </div>
                         ))}
 
-                        {conversations.length === 0 && (
+                        {filteredConversations.length === 0 && (
                             <div className="text-center py-10 px-4">
                                 <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center mx-auto mb-3">
-                                    <MessageSquare className="w-6 h-6 text-slate-600" />
+                                    {searchQuery ? <Search className="w-6 h-6 text-slate-600" /> : <MessageSquare className="w-6 h-6 text-slate-600" />}
                                 </div>
-                                <p className="text-sm text-slate-500">No hay historial aún.</p>
+                                <p className="text-sm text-slate-500">
+                                    {searchQuery ? "No se encontraron conversaciones" : "No hay historial aún."}
+                                </p>
                             </div>
                         )}
                     </div>

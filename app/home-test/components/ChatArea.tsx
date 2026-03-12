@@ -244,18 +244,18 @@ export function ChatArea({
 
             {/* Indicador de que el bot está escribiendo */}
             {isTyping && (
-                <div className="flex items-start gap-2 md:gap-3 px-3 md:px-4 mb-4">
-                    <div className="w-8 h-8 md:w-10 md:h-10 shrink-0 rounded-xl bg-[#00E599]/20 flex items-center justify-center">
-                        <span className="text-lg">🤖</span>
+                <div className="flex items-start gap-3 md:gap-4">
+                    <div className="w-8 h-8 md:w-10 md:h-10 rounded-full flex items-center justify-center shrink-0 border bg-[#00E599]/10 border-[#00E599]/20 shadow-[0_0_15px_rgba(0,229,153,0.1)] text-[#00E599]">
+                        <Bot className="w-5 h-5 md:w-6 md:h-6" />
                     </div>
-                    <div className="bg-white/5 backdrop-blur-sm rounded-2xl px-4 py-3">
-                        <div className="flex items-center gap-2">
+                    <div className="bg-white/5 border border-white/5 rounded-2xl rounded-tl-sm backdrop-blur-md px-5 py-3.5">
+                        <div className="flex items-center gap-2.5">
                             <div className="flex gap-1">
                                 <span className="w-2 h-2 bg-[#00E599] rounded-full animate-bounce" style={{ animationDelay: "0ms" }}></span>
                                 <span className="w-2 h-2 bg-[#00E599] rounded-full animate-bounce" style={{ animationDelay: "150ms" }}></span>
                                 <span className="w-2 h-2 bg-[#00E599] rounded-full animate-bounce" style={{ animationDelay: "300ms" }}></span>
                             </div>
-                            <span className="text-slate-400 text-sm">Pensando...</span>
+                            <span className="text-slate-400 text-sm font-light">Sonora está pensando...</span>
                         </div>
                     </div>
                 </div>

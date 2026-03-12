@@ -30,6 +30,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 import { compressImageToBase64 } from "../_helpers/imageUtils";
 import { useBackendHealth } from "@/hooks/useBackendHealth";
+import { useToast } from "@/components/ui/toast";
 
 export const dynamic = 'force-dynamic';
 
@@ -53,6 +54,7 @@ export default function ChatPage() {
 function ChatContent() {
   const searchParams = useSearchParams();
   const urlAgentId = searchParams.get("agentId");
+  const { showToast } = useToast();
   
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -374,7 +376,7 @@ function ChatContent() {
       window.URL.revokeObjectURL(url);
     } catch (error: any) {
       console.error("Error exportando:", error);
-      alert(error.message || "Error al exportar la conversación");
+      showToast("error", error.message || "Error al exportar la conversación");
     } finally {
       setIsExporting(false);
     }
@@ -435,7 +437,7 @@ function ChatContent() {
       await loadConversations();
     } catch (error) {
       console.error("Error eliminando conversacion:", error);
-      alert("Error al eliminar la conversacion.");
+      showToast("error", "Error al eliminar la conversacion.");
     } finally {
       setDeletingConversationId(null);
     }
@@ -470,7 +472,7 @@ function ChatContent() {
           return;
         } catch (error: any) {
           console.error("Error procesando archivo:", error);
-          alert(error.message || "Error al procesar el archivo");
+          showToast("error", error.message || "Error al procesar el archivo");
           return;
         }
       }
@@ -490,7 +492,7 @@ function ChatContent() {
             sendMultimodalMessage(message.trim(), validUrls);
             setMessage("");
           } else {
-            alert("Error al subir las imágenes.");
+            showToast("error", "Error al subir las imágenes.");
           }
         } catch (error) {
           console.error("Error procesando imágenes:", error);
@@ -526,7 +528,7 @@ function ChatContent() {
           setTitleGenerated(false);
           await new Promise(resolve => setTimeout(resolve, 100));
         } else {
-          alert("Error al crear la conversación");
+          showToast("error", "Error al crear la conversación");
           return;
         }
       }

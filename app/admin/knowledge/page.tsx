@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { Upload, FileText, Trash2, CheckCircle, AlertCircle, Loader2, RefreshCw, X, MessageSquare, Download } from "lucide-react";
 import AppSidebar from "@/components/app-sidebar";
 import Link from "next/link";
+import { useToast } from "@/components/ui/toast";
 
 interface KnowledgeFile {
   name: string;
@@ -22,6 +23,7 @@ export default function KnowledgeDashboard() {
   const [selectedPilarId, setSelectedPilarId] = useState<number | null>(null);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { showToast } = useToast();
 
   useEffect(() => {
     setMounted(true);
@@ -58,11 +60,11 @@ export default function KnowledgeDashboard() {
 
       const data = await res.json();
       if (data.success) {
-        alert("Archivo eliminado correctamente");
+        showToast("success", "Archivo eliminado correctamente");
         loadFiles(); // Recargar lista
       }
     } catch (error) {
-      alert("Error eliminando archivo");
+      showToast("error", "Error eliminando archivo");
     }
   };
 
@@ -73,7 +75,7 @@ export default function KnowledgeDashboard() {
 
       if (!response.ok) {
         const error = await response.json();
-        alert(error.error || "Error al descargar");
+        showToast("error", error.error || "Error al descargar");
         return;
       }
 
@@ -88,7 +90,7 @@ export default function KnowledgeDashboard() {
       document.body.removeChild(a);
     } catch (error) {
       console.error("Error descargando:", error);
-      alert("Error al descargar el archivo");
+      showToast("error", "Error al descargar el archivo");
     }
   };
   // Función de chunking semántico: respeta párrafos y agrega overlap

@@ -109,18 +109,6 @@ export default function LoginPage() {
               </div>
             </div>
 
-            <div className="flex items-center justify-end">
-              <div className="text-sm">
-                <a
-                  href="#"
-                  className="font-medium text-[#00E599] hover:text-[#00E599]/80 transition-colors"
-                  onClick={(e) => e.preventDefault()}
-                >
-                  ¿Olvidaste tu contraseña?
-                </a>
-              </div>
-            </div>
-
             <div>
               <button
                 type="submit"
