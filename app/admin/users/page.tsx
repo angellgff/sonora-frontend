@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Users, UserPlus, Shield, User, Loader2, CheckCircle, XCircle, Trash2 } from "lucide-react";
 import AppSidebar from "@/components/app-sidebar";
+import Breadcrumbs from "@/components/ui/breadcrumbs";
 import { UserRowSkeleton } from "@/components/ui/skeleton";
 
 type UserProfile = {
@@ -157,6 +158,7 @@ export default function AdminUsersPage() {
 
                 <AppSidebar />
 
+                <Breadcrumbs items={[{ label: "Admin" }, { label: "Gestión de Usuarios" }]} />
                 <div className="flex items-center gap-4 mb-8">
                     <div className="flex items-center gap-3">
                         <div className="p-3 rounded-xl bg-[#00E599]/10 border border-[#00E599]/20">

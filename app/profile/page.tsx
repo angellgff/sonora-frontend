@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { createBrowserClient } from "@supabase/ssr";
 import { useRouter } from "next/navigation";
-import { Camera, User, Mail, Shield, Save, Loader2, CheckCircle, AlertCircle } from "lucide-react";
+import { Camera, User, Mail, Shield, Save, Loader2, CheckCircle, AlertCircle, MessageSquare, Clock, ArrowRight } from "lucide-react";
 import { ProfileSkeleton } from "@/components/ui/skeleton";
 import Image from "next/image";
 import AppSidebar from "@/components/app-sidebar";
@@ -16,6 +16,9 @@ export default function ProfilePage() {
     const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
     const [pilarId, setPilarId] = useState<number | null>(null);
     const [status, setStatus] = useState<{ type: 'success' | 'error' | null, message: string }>({ type: null, message: '' });
+    const [recentConversations, setRecentConversations] = useState<any[]>([]);
+    const [totalConversations, setTotalConversations] = useState(0);
+    const [memberSince, setMemberSince] = useState<string>('');
 
     const fileInputRef = useRef<HTMLInputElement>(null);
     const router = useRouter();
@@ -57,6 +60,29 @@ export default function ProfilePage() {
                 .single();
 
             if (profile) setPilarId(profile.pilar_id);
+
+            // Fetch recent conversations
+            const { data: convos } = await supabase
+                .from('conversations')
+                .select('id, title, created_at')
+                .eq('user_id', user.id)
+                .order('created_at', { ascending: false })
+                .limit(5);
+
+            if (convos) setRecentConversations(convos);
+
+            // Fetch total count
+            const { count } = await supabase
+                .from('conversations')
+                .select('id', { count: 'exact', head: true })
+                .eq('user_id', user.id);
+
+            setTotalConversations(count || 0);
+
+            // Member since
+            if (user.created_at) {
+                setMemberSince(new Date(user.created_at).toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' }));
+            }
 
             setLoading(false);
         };
@@ -253,6 +279,58 @@ export default function ProfilePage() {
                     </form>
 
                 </div>
+
+                {/* Recent Activity Section */}
+                <div className="mt-8 bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-8 shadow-2xl">
+                    <div className="flex items-center justify-between mb-6">
+                        <div className="flex items-center gap-2">
+                            <Clock className="w-5 h-5 text-[#00E599]" />
+                            <h2 className="text-lg font-bold text-white">Actividad Reciente</h2>
+                        </div>
+                        <span className="text-xs text-slate-500">{totalConversations} conversaciones en total</span>
+                    </div>
+
+                    {recentConversations.length === 0 ? (
+                        <div className="text-center py-8">
+                            <MessageSquare className="w-8 h-8 text-slate-600 mx-auto mb-2" />
+                            <p className="text-slate-500 text-sm">Aún no tienes conversaciones</p>
+                            <a href="/chat" className="text-[#00E599] text-sm font-medium hover:underline mt-1 inline-block">
+                                Empezar mi primera conversación →
+                            </a>
+                        </div>
+                    ) : (
+                        <div className="space-y-2">
+                            {recentConversations.map((convo) => (
+                                <a
+                                    key={convo.id}
+                                    href="/chat"
+                                    className="flex items-center gap-3 p-3 rounded-xl hover:bg-white/5 transition-colors group"
+                                >
+                                    <div className="p-2 rounded-lg bg-[#00E599]/10 shrink-0">
+                                        <MessageSquare className="w-4 h-4 text-[#00E599]" />
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <p className="text-sm font-medium text-white truncate">
+                                            {convo.title || 'Conversación sin título'}
+                                        </p>
+                                        <p className="text-[10px] text-slate-500">
+                                            {new Date(convo.created_at).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                        </p>
+                                    </div>
+                                    <ArrowRight className="w-4 h-4 text-slate-600 group-hover:text-[#00E599] transition-colors shrink-0" />
+                                </a>
+                            ))}
+                        </div>
+                    )}
+
+                    {/* Member since */}
+                    {memberSince && (
+                        <div className="mt-6 pt-4 border-t border-white/5 text-center">
+                            <p className="text-xs text-slate-600">Miembro desde {memberSince}</p>
+                        </div>
+                    )}
+                </div>
+
             </div>
         </div>
     );

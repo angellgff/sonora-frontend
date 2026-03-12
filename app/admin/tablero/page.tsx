@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import AppSidebar from "@/components/app-sidebar";
+import Breadcrumbs from "@/components/ui/breadcrumbs";
 import {
     Activity,
     Users,
@@ -92,7 +93,9 @@ export default function TableroFundador() {
             <div className="md:pl-[68px] relative z-10 min-h-screen flex flex-col pt-14 md:pt-0">
                 {/* Header */}
                 <div className="px-6 md:px-10 py-8 border-b border-white/5">
-                    <div className="flex items-center justify-between max-w-7xl mx-auto">
+                    <div className="max-w-7xl mx-auto">
+                    <Breadcrumbs items={[{ label: "Admin" }, { label: "Tablero del Fundador" }]} />
+                    <div className="flex items-center justify-between">
                         <div>
                             <div className="flex items-center gap-3 mb-2">
                                 <div className="w-10 h-10 rounded-xl bg-[#00E599]/10 border border-[#00E599]/20 flex items-center justify-center">
@@ -110,6 +113,7 @@ export default function TableroFundador() {
                             <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
                             Actualizar
                         </button>
+                    </div>
                     </div>
                 </div>
 

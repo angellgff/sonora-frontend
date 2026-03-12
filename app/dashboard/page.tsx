@@ -1,7 +1,64 @@
 import AppSidebar from "@/components/app-sidebar";
 import Link from "next/link";
-import { MessageSquare, User, Shield, BookOpen, Users as UsersIcon, ArrowRight, Activity, FileText, Clock } from "lucide-react";
+import { MessageSquare, User, Shield, BookOpen, Users as UsersIcon, ArrowRight, Activity, FileText, Clock, BarChart3, Bot, Zap } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
+
+const PILAR_INFO: Record<number, { nombre: string; descripcion: string; tips: string[] }> = {
+  1: {
+    nombre: "Administración General",
+    descripcion: "Supervisás el ecosistema completo. Tu IA cruza datos de todos los pilares para detectar riesgos y proponer acciones estratégicas.",
+    tips: [
+      "Preguntale a Sonora \"¿cómo está el ecosistema?\" para un resumen rápido",
+      "Revisá el Tablero del Fundador para ver la salud global",
+      "Podés adjuntar documentos para que Sonora los analice al instante",
+    ],
+  },
+  2: {
+    nombre: "Sistema Informático",
+    descripcion: "Tu IA monitorea estabilidad técnica, seguridad e integridad de datos. Detecta vulnerabilidades y mantiene el sistema funcionando.",
+    tips: [
+      "Consultá sobre el estado técnico del sistema",
+      "Preguntá por registros de acceso y posibles vulnerabilidades",
+      "Subí documentos técnicos para que Sonora los conozca",
+    ],
+  },
+  3: {
+    nombre: "Ventas y Tribus",
+    descripcion: "Tu IA audita producción comercial, métricas de ventas y detecta desviaciones. Controla adhesiones, conversión y producción por tribu.",
+    tips: [
+      "Preguntá por métricas de adhesiones y conversión",
+      "Consultá sobre el rendimiento de las tribus",
+      "Sonora puede detectar patrones sospechosos en ventas",
+    ],
+  },
+  4: {
+    nombre: "Marketing y Comunicación",
+    descripcion: "Tu IA optimiza la comunicación y evita pérdida publicitaria. Analiza rendimiento de campañas, costo por adhesión y ROI.",
+    tips: [
+      "Preguntá sobre el rendimiento de tus campañas",
+      "Consultá el costo por adhesión actual",
+      "Analizá documentos de estrategia de marketing con Sonora",
+    ],
+  },
+  5: {
+    nombre: "Legal y Control de Calidad",
+    descripcion: "Tu IA detecta incumplimientos contractuales y conductuales. Controla fraude, trazabilidad y riesgo reputacional.",
+    tips: [
+      "Preguntá sobre incidentes y nivel de gravedad",
+      "Consultá sobre cumplimiento contractual",
+      "Subí documentos legales para análisis detallado",
+    ],
+  },
+  6: {
+    nombre: "Contable y Finanzas",
+    descripcion: "Tu IA controla el dinero y la trazabilidad documental. Supervisa flujo de caja, comisiones, pagos y fondo de reserva.",
+    tips: [
+      "Preguntá sobre el flujo de caja y margen",
+      "Consultá comisiones liquidadas y pagos ejecutados",
+      "Subí estados financieros para que Sonora los analice",
+    ],
+  },
+};
 
 export default async function UserDashboard() {
   const supabase = await createClient();
@@ -10,7 +67,6 @@ export default async function UserDashboard() {
 
   let pilarId: number | null = null;
   let fullName = user?.user_metadata?.full_name || '';
-  let pilarNombre = '';
   if (user) {
     const { data: profile } = await supabase
       .from('profiles')
@@ -19,30 +75,27 @@ export default async function UserDashboard() {
       .single();
     if (profile) {
       pilarId = profile.pilar_id;
-      const PILAR_NOMBRES: Record<number, string> = {
-        1: "Administración General", 2: "Sistema Informático", 3: "Ventas y Tribus",
-        4: "Marketing y Comunicación", 5: "Legal y Control de Calidad", 6: "Contable y Finanzas",
-      };
-      pilarNombre = pilarId ? PILAR_NOMBRES[pilarId] || '' : '';
     }
   }
 
   const isAdmin = pilarId === 1;
+  const pilarInfo = pilarId ? PILAR_INFO[pilarId] : null;
 
-  // Fetch quick stats for admin
-  let totalConversations = 0;
-  let totalDocs = 0;
+  // Fetch user's own conversation count
+  let myConversations = 0;
+  if (user) {
+    const { count } = await supabase
+      .from('conversations')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', user.id);
+    myConversations = count || 0;
+  }
+
+  // Admin-only stats
   let totalUsers = 0;
-
   if (isAdmin) {
-    const [convos, docs, users] = await Promise.all([
-      supabase.from('conversations').select('id', { count: 'exact', head: true }),
-      supabase.from('knowledge_base').select('id', { count: 'exact', head: true }),
-      supabase.from('profiles').select('id', { count: 'exact', head: true }),
-    ]);
-    totalConversations = convos.count || 0;
-    totalDocs = docs.count || 0;
-    totalUsers = users.count || 0;
+    const { count } = await supabase.from('profiles').select('id', { count: 'exact', head: true });
+    totalUsers = count || 0;
   }
 
   // Time-based greeting
@@ -51,19 +104,15 @@ export default async function UserDashboard() {
 
   return (
     <div className="min-h-screen bg-[#050B14] text-slate-100 font-sans selection:bg-[#00E599] selection:text-black">
-
-      {/* Background Ambience */}
       <div className="fixed top-[-20%] left-[-10%] w-[50%] h-[50%] bg-[#00E599]/10 rounded-full blur-[120px] pointer-events-none"></div>
       <div className="fixed bottom-[-20%] right-[-10%] w-[60%] h-[60%] bg-[#3B82F6]/5 rounded-full blur-[150px] pointer-events-none"></div>
 
-      {/* Sidebar */}
       <AppSidebar />
 
-      {/* Main Content */}
       <div className="md:pl-[68px] relative z-10 min-h-screen flex flex-col pt-14 md:pt-0">
 
         {/* Hero Section */}
-        <div className="pt-16 md:pt-20 pb-8 px-6 md:px-10 max-w-6xl mx-auto w-full">
+        <div className="pt-16 md:pt-20 pb-6 px-6 md:px-10 max-w-6xl mx-auto w-full">
           <div className="flex items-center gap-2 mb-1">
             <Clock className="w-4 h-4 text-slate-500" />
             <span className="text-sm text-slate-500 font-medium">{timeGreeting}{fullName ? `, ${fullName}` : ''}.</span>
@@ -71,42 +120,63 @@ export default async function UserDashboard() {
           <h1 className="text-3xl md:text-4xl font-bold tracking-tight mb-1">
             Bienvenido a <span className="text-[#00E599]">Sonora</span>
           </h1>
-          <p className="text-slate-400 text-base max-w-xl">
-            {pilarNombre
-              ? <>Estás asignado al pilar <span className="text-white font-medium">{pilarNombre}</span>.</>
-              : <>Tu asistente de inteligencia artificial avanzado.</>
-            }
-          </p>
+          {pilarInfo && (
+            <p className="text-slate-400 text-base max-w-2xl">
+              Pilar {pilarId} — <span className="text-white font-medium">{pilarInfo.nombre}</span>
+            </p>
+          )}
         </div>
 
-        {/* Content */}
         <div className="px-6 md:px-10 max-w-6xl mx-auto w-full flex-1 pb-12">
 
-          {/* Admin Quick Stats */}
-          {isAdmin && (
-            <div className="grid grid-cols-3 gap-3 md:gap-4 mb-8">
-              {[
-                { label: "Conversaciones", value: totalConversations, icon: <MessageSquare className="w-4 h-4" />, color: "text-[#00E599]" },
-                { label: "Documentos KB", value: totalDocs, icon: <FileText className="w-4 h-4" />, color: "text-blue-400" },
-                { label: "Usuarios", value: totalUsers, icon: <UsersIcon className="w-4 h-4" />, color: "text-purple-400" },
-              ].map((stat) => (
-                <div key={stat.label} className="p-4 md:p-5 bg-white/5 border border-white/10 rounded-2xl">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className={stat.color}>{stat.icon}</span>
-                    <span className="text-[10px] md:text-xs font-semibold uppercase tracking-wider text-slate-500">{stat.label}</span>
-                  </div>
-                  <p className="text-2xl md:text-3xl font-bold text-white">{stat.value}</p>
+          {/* Pilar Info Card (for everyone) */}
+          {pilarInfo && (
+            <div className="mb-8 p-5 md:p-6 bg-white/5 border border-white/10 rounded-2xl">
+              <div className="flex items-start gap-4">
+                <div className="p-3 rounded-xl bg-[#00E599]/10 border border-[#00E599]/20 shrink-0">
+                  <Bot className="w-6 h-6 text-[#00E599]" />
                 </div>
-              ))}
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-white font-bold mb-1">Tu IA Especializada</h3>
+                  <p className="text-slate-400 text-sm leading-relaxed mb-4">{pilarInfo.descripcion}</p>
+                  <div className="space-y-2">
+                    <p className="text-[10px] uppercase tracking-wider text-slate-600 font-semibold">Sugerencias rápidas</p>
+                    {pilarInfo.tips.map((tip, i) => (
+                      <div key={i} className="flex items-start gap-2">
+                        <Zap className="w-3.5 h-3.5 text-[#00E599] mt-0.5 shrink-0" />
+                        <span className="text-xs text-slate-400">{tip}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
             </div>
           )}
 
+          {/* Quick Stats */}
+          <div className={`grid ${isAdmin ? 'grid-cols-2' : 'grid-cols-1 md:grid-cols-2'} gap-3 md:gap-4 mb-8`}>
+            <div className="p-4 md:p-5 bg-white/5 border border-white/10 rounded-2xl">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-[#00E599]"><MessageSquare className="w-4 h-4" /></span>
+                <span className="text-[10px] md:text-xs font-semibold uppercase tracking-wider text-slate-500">Mis Conversaciones</span>
+              </div>
+              <p className="text-2xl md:text-3xl font-bold text-white">{myConversations}</p>
+            </div>
+            {isAdmin && (
+              <div className="p-4 md:p-5 bg-white/5 border border-white/10 rounded-2xl">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-purple-400"><UsersIcon className="w-4 h-4" /></span>
+                  <span className="text-[10px] md:text-xs font-semibold uppercase tracking-wider text-slate-500">Usuarios Total</span>
+                </div>
+                <p className="text-2xl md:text-3xl font-bold text-white">{totalUsers}</p>
+              </div>
+            )}
+          </div>
+
           {/* Quick Actions */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-
-            {/* Iniciar Conversación — principal */}
             <Link
-              href="/home-test"
+              href="/chat"
               className="group relative p-6 bg-[#00E599]/5 border border-[#00E599]/15 rounded-2xl hover:bg-[#00E599]/10 hover:border-[#00E599]/30 transition-all hover:-translate-y-1 hover:shadow-[0_8px_30px_-12px_rgba(0,229,153,0.3)]"
             >
               <div className="flex items-start justify-between mb-4">
@@ -123,7 +193,6 @@ export default async function UserDashboard() {
               </p>
             </Link>
 
-            {/* Mi Perfil */}
             <Link
               href="/profile"
               className="group relative p-6 bg-white/5 border border-white/10 rounded-2xl hover:bg-white/[0.07] hover:border-white/15 transition-all hover:-translate-y-1"
@@ -152,7 +221,25 @@ export default async function UserDashboard() {
                   Panel de Administración
                 </h2>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <Link
+                  href="/admin/tablero"
+                  className="group relative p-5 bg-[#00E599]/5 border border-[#00E599]/15 rounded-2xl hover:bg-[#00E599]/10 hover:border-[#00E599]/25 transition-all hover:-translate-y-0.5"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="p-2.5 rounded-xl bg-[#00E599]/10 border border-[#00E599]/20">
+                      <BarChart3 className="w-5 h-5 text-[#00E599]" />
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="text-sm font-bold text-white group-hover:text-[#00E599] transition-colors">
+                        Tablero del Fundador
+                      </h3>
+                      <p className="text-xs text-slate-500">Visión estratégica global</p>
+                    </div>
+                    <ArrowRight className="w-4 h-4 text-slate-600 group-hover:text-[#00E599] transition-colors" />
+                  </div>
+                </Link>
+
                 <Link
                   href="/admin/knowledge"
                   className="group relative p-5 bg-white/5 border border-white/10 rounded-2xl hover:bg-amber-500/5 hover:border-amber-500/10 transition-all hover:-translate-y-0.5"
@@ -163,9 +250,9 @@ export default async function UserDashboard() {
                     </div>
                     <div className="flex-1">
                       <h3 className="text-sm font-bold text-white group-hover:text-amber-400 transition-colors">
-                        Base de Conocimiento
+                        Conocimiento
                       </h3>
-                      <p className="text-xs text-slate-500">Gestionar documentos del bot</p>
+                      <p className="text-xs text-slate-500">Documentos del bot</p>
                     </div>
                     <ArrowRight className="w-4 h-4 text-slate-600 group-hover:text-amber-400 transition-colors" />
                   </div>
@@ -181,9 +268,9 @@ export default async function UserDashboard() {
                     </div>
                     <div className="flex-1">
                       <h3 className="text-sm font-bold text-white group-hover:text-amber-400 transition-colors">
-                        Gestión de Usuarios
+                        Usuarios
                       </h3>
-                      <p className="text-xs text-slate-500">Crear y administrar usuarios</p>
+                      <p className="text-xs text-slate-500">Crear y administrar</p>
                     </div>
                     <ArrowRight className="w-4 h-4 text-slate-600 group-hover:text-amber-400 transition-colors" />
                   </div>
@@ -199,9 +286,9 @@ export default async function UserDashboard() {
                     </div>
                     <div className="flex-1">
                       <h3 className="text-sm font-bold text-white group-hover:text-amber-400 transition-colors">
-                        Semáforo de Pilares
+                        Semáforo
                       </h3>
-                      <p className="text-xs text-slate-500">Estado operativo del ecosistema</p>
+                      <p className="text-xs text-slate-500">Estado del ecosistema</p>
                     </div>
                     <ArrowRight className="w-4 h-4 text-slate-600 group-hover:text-amber-400 transition-colors" />
                   </div>

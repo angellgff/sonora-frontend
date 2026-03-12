@@ -1,7 +1,7 @@
 import React, { useRef, useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Mic, Paperclip, Send, X, FileText, FileSpreadsheet } from "lucide-react";
+import { Paperclip, Send, X } from "lucide-react";
 import Image from "next/image";
 
 // Helper: icono y color por tipo de archivo
@@ -27,9 +27,6 @@ function formatFileSize(bytes: number): string {
 interface ChatControlsProps {
     message: string;
     onMessageChange: (value: string) => void;
-    isRecording: boolean;
-    onToggleRecording: () => void;
-    isConnected: boolean;
     isUploading: boolean;
     onSendMessage: (files?: File[], textFile?: File | null) => void;
     onKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => void;
@@ -38,9 +35,6 @@ interface ChatControlsProps {
 export function ChatControls({
     message,
     onMessageChange,
-    isRecording,
-    onToggleRecording,
-    isConnected,
     isUploading,
     onSendMessage,
     onKeyDown,
@@ -92,7 +86,7 @@ export function ChatControls({
     };
 
     const handleKeyDownWrapper = (e: React.KeyboardEvent<HTMLInputElement>) => {
-        if (e.key === 'Enter' && !isRecording && (message.trim() || selectedFiles.length > 0)) {
+        if (e.key === 'Enter' && (message.trim() || selectedFiles.length > 0)) {
             handleSend();
         } else {
             onKeyDown(e);
@@ -159,21 +153,6 @@ export function ChatControls({
                 )}
 
                 <div className="flex items-end gap-2 md:gap-3">
-                    {/* Botón de audio */}
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        aria-label={isRecording ? "Detener grabación" : "Grabar audio"}
-                        className={`shrink-0 h-11 w-11 md:h-12 md:w-12 rounded-xl border transition-all duration-300 ${isRecording
-                            ? "bg-red-500/20 border-red-500/50 text-red-500 animate-pulse"
-                            : "bg-white/5 border-white/10 text-slate-400 hover:text-white hover:bg-white/10"
-                            }`}
-                        onClick={onToggleRecording}
-                        disabled={selectedFiles.length > 0}
-                    >
-                        <Mic className={`w-5 h-5 ${isRecording ? "scale-110" : ""}`} />
-                    </Button>
-
                     {/* Input de archivo invisible */}
                     <input
                         type="file"
@@ -200,12 +179,11 @@ export function ChatControls({
                     {/* Input de texto */}
                     <div className="flex-1 relative">
                         <Input
-                            placeholder={isConnected ? "🎤 Usa tu voz para hablar..." : (selectedFiles.length > 0 ? "Añade una descripción..." : "Escribe para chatear...")}
+                            placeholder={selectedFiles.length > 0 ? "Añade una descripción..." : "Escribe para chatear..."}
                             value={message}
                             onChange={(e) => onMessageChange(e.target.value)}
                             onKeyDown={handleKeyDownWrapper}
                             className="h-11 md:h-12 text-sm md:text-base bg-black/20 border-white/10 focus:border-[#00E599]/50 focus:ring-[#00E599]/20 text-slate-200 placeholder:text-slate-500 rounded-xl"
-                            disabled={isRecording || isConnected}
                         />
                     </div>
 
@@ -214,24 +192,16 @@ export function ChatControls({
                         variant="ghost"
                         size="icon"
                         aria-label="Enviar mensaje"
-                        className={`shrink-0 h-11 w-11 md:h-12 md:w-12 rounded-xl transition-all duration-300 ${(!message.trim() && selectedFiles.length === 0 && !selectedTextFile) || isRecording
+                        className={`shrink-0 h-11 w-11 md:h-12 md:w-12 rounded-xl transition-all duration-300 ${(!message.trim() && selectedFiles.length === 0 && !selectedTextFile)
                             ? "bg-white/5 text-slate-600 cursor-not-allowed"
                             : "bg-[#00E599] text-slate-900 hover:bg-[#00E599]/90 hover:scale-105 shadow-[0_0_15px_rgba(0,229,153,0.3)]"
                             }`}
-                        disabled={(!message.trim() && selectedFiles.length === 0 && !selectedTextFile) || isRecording}
+                        disabled={(!message.trim() && selectedFiles.length === 0 && !selectedTextFile)}
                         onClick={handleSend}
                     >
                         <Send className="w-5 h-5" />
                     </Button>
                 </div>
-
-                {isRecording && (
-                    <div className="mt-3 text-center">
-                        <p className="text-xs md:text-sm text-red-400 animate-pulse flex items-center justify-center gap-2">
-                            <span className="w-2 h-2 rounded-full bg-red-500"></span> Grabando audio...
-                        </p>
-                    </div>
-                )}
             </div>
         </div>
     );

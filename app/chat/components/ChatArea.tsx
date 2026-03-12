@@ -123,15 +123,29 @@ export function ChatArea({
             {/* Estado vacío: sin conversación seleccionada */}
             {!hasSelectedConversation && messages.length === 0 && (
                 <div className="flex flex-col items-center justify-center h-full text-center p-8">
-                    <div className="w-20 h-20 rounded-full bg-white/5 flex items-center justify-center mb-6 border border-white/5">
-                        <MessageSquare className="w-10 h-10 text-slate-600" />
+                    <div className="w-20 h-20 rounded-full bg-[#00E599]/10 flex items-center justify-center mb-6 border border-[#00E599]/20">
+                        <MessageSquare className="w-10 h-10 text-[#00E599]" />
                     </div>
                     <h2 className="text-xl font-bold mb-2 text-slate-200">
                         Espacio de Conversación
                     </h2>
-                    <p className="text-slate-500 max-w-sm">
-                        Selecciona o crea una nueva conversación para interactuar con la inteligencia de Sonora.
+                    <p className="text-slate-500 max-w-sm mb-6">
+                        Selecciona una conversación del historial o empieza una nueva para interactuar con Sonora.
                     </p>
+
+                    {/* Feature hints */}
+                    <div className="flex flex-wrap justify-center gap-3 mb-6">
+                        {[
+                            "📎 Adjuntar archivos",
+                            "📷 Usar cámara",
+                            "📥 Exportar a DOCX",
+                            "🔍 Buscar en historial",
+                        ].map((hint) => (
+                            <span key={hint} className="px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-xs text-slate-400">
+                                {hint}
+                            </span>
+                        ))}
+                    </div>
                 </div>
             )}
 

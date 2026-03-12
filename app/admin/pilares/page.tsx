@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import AppSidebar from "@/components/app-sidebar";
+import Breadcrumbs from "@/components/ui/breadcrumbs";
 import { Activity, RefreshCw } from "lucide-react";
 import { PilarCardSkeleton } from "@/components/ui/skeleton";
 
@@ -79,6 +80,7 @@ export default function PilaresSemaphore() {
             <div className="md:pl-[68px] relative z-10 min-h-screen flex flex-col pt-14 md:pt-0">
                 {/* Header */}
                 <div className="pt-10 pb-6 px-6 md:px-10 max-w-5xl mx-auto w-full">
+                    <Breadcrumbs items={[{ label: "Admin" }, { label: "Semáforo de Pilares" }]} />
                     <div className="flex items-center gap-3 mb-1">
                         <Activity className="w-6 h-6 text-[#00E599]" />
                         <h1 className="text-2xl md:text-3xl font-bold tracking-tight">

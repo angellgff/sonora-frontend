@@ -33,7 +33,7 @@ const navItems: NavItem[] = [
         icon: <LayoutDashboard className="w-5 h-5" />,
     },
     {
-        href: "/home-test",
+        href: "/chat",
         label: "Chat",
         icon: <MessageSquare className="w-5 h-5" />,
     },
@@ -199,7 +199,6 @@ export default function AppSidebar() {
                             <Link
                                 key={item.href}
                                 href={item.href}
-                                title={collapsed ? item.label : undefined}
                                 className={`
                   flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium
                   transition-all duration-200 group relative
@@ -215,6 +214,14 @@ export default function AppSidebar() {
                                 {!collapsed && <span>{item.label}</span>}
                                 {isActive && (
                                     <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 bg-[#00E599] rounded-r-full" />
+                                )}
+
+                                {/* Tooltip estilizado (solo en collapsed) */}
+                                {collapsed && (
+                                    <span className="absolute left-full ml-3 px-3 py-1.5 rounded-lg bg-[#0A1628] border border-white/10 text-xs font-medium text-white whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-200 shadow-xl z-[60]">
+                                        {item.label}
+                                        <span className="absolute top-1/2 -translate-y-1/2 -left-1 w-2 h-2 bg-[#0A1628] border-l border-b border-white/10 rotate-45" />
+                                    </span>
                                 )}
                             </Link>
                         );

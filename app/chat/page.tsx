@@ -65,7 +65,6 @@ function ChatContent() {
     }
   }, []);
   const [message, setMessage] = useState("");
-  const [isRecording, setIsRecording] = useState(false);
   const [selectedConversation, setSelectedConversation] =
     useState<Conversation | null>(null);
   const [titleGenerated, setTitleGenerated] = useState(false);
@@ -796,9 +795,6 @@ function ChatContent() {
         <ChatControls
           message={message}
           onMessageChange={setMessage}
-          isRecording={isRecording}
-          onToggleRecording={() => setIsRecording(!isRecording)}
-          isConnected={isConnected}
           isUploading={isUploading || textChatLoading}
           onSendMessage={handleSendMessage}
           onKeyDown={handleKeyDown}

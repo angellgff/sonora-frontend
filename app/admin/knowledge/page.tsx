@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Upload, FileText, Trash2, CheckCircle, AlertCircle, Loader2, RefreshCw, X, MessageSquare, Download } from "lucide-react";
 import AppSidebar from "@/components/app-sidebar";
+import Breadcrumbs from "@/components/ui/breadcrumbs";
 import Link from "next/link";
 import { useToast } from "@/components/ui/toast";
 
@@ -272,6 +273,7 @@ export default function KnowledgeDashboard() {
       <div className="md:pl-[68px] relative z-10 mx-auto px-4 sm:px-6 lg:px-8 max-w-4xl mt-8 mb-20 pt-14 md:pt-6">
 
         {/* Header Dashboard */}
+        <Breadcrumbs items={[{ label: "Admin" }, { label: "Base de Conocimiento" }]} />
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10">
           <div>
             <h1 className="text-3xl md:text-4xl font-bold tracking-tight mb-2 flex items-center gap-3">
@@ -281,7 +283,7 @@ export default function KnowledgeDashboard() {
           </div>
           <div className="flex gap-3">
             {/* Botón Ir al Chat */}
-            <Link href="/home-test" className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all text-sm font-medium text-slate-300 hover:text-[#00E599]">
+            <Link href="/chat" className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all text-sm font-medium text-slate-300 hover:text-[#00E599]">
               <MessageSquare className="w-4 h-4" /> <span className="hidden md:inline">Probar Chat</span>
             </Link>
 

@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Bot, Plus, Trash2, Loader2, CheckCircle, XCircle, FileText, X, MessageCircle } from "lucide-react";
 import AppSidebar from "@/components/app-sidebar";
+import Breadcrumbs from "@/components/ui/breadcrumbs";
 
 type Agent = {
     id: string;
@@ -143,6 +144,7 @@ export default function AdminAgentsPage() {
                 <AppSidebar />
 
                 {/* Header */}
+                <Breadcrumbs items={[{ label: "Admin" }, { label: "Fábrica de Agentes" }]} />
                 <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
                     <div className="flex items-center gap-3">
                         <div className="p-3 bg-[#00E599]/10 rounded-xl border border-[#00E599]/20">
@@ -225,7 +227,7 @@ export default function AdminAgentsPage() {
                                                 <td className="px-6 py-4 text-right">
                                                     <div className="flex justify-end gap-2">
                                                         <a
-                                                            href={`/home-test?agentId=${agent.assistant_id}`}
+                                                            href={`/chat?agentId=${agent.assistant_id}`}
                                                             className="p-2 text-[#00E599] hover:text-[#00c785] hover:bg-[#00E599]/10 rounded-lg transition-colors"
                                                             title="Chatear con el agente"
                                                         >
