@@ -1,8 +1,24 @@
-import React from "react";
+import React, { useState } from "react";
 import ReactMarkdown from "react-markdown";
 import { Card } from "@/components/ui/card";
 import { ChatMessagesSkeleton } from "@/components/ui/skeleton";
-import { MessageSquare, Bot, User } from "lucide-react";
+import { MessageSquare, Bot, User, Copy, Check } from "lucide-react";
+import dayjs from "dayjs";
+import relativeTime from "dayjs/plugin/relativeTime";
+import "dayjs/locale/es";
+
+dayjs.extend(relativeTime);
+dayjs.locale("es");
+
+function formatMessageTime(timestamp: string): string {
+    const d = dayjs(timestamp);
+    const now = dayjs();
+    if (now.diff(d, 'minute') < 1) return 'ahora';
+    if (now.diff(d, 'hour') < 1) return d.fromNow();
+    if (d.isSame(now, 'day')) return 'Hoy ' + d.format('H:mm');
+    if (d.isSame(now.subtract(1, 'day'), 'day')) return 'Ayer ' + d.format('H:mm');
+    return d.format('D MMM, H:mm');
+}
 
 // Definimos la interfaz Message aquí o la importamos si está en un archivo común
 // Por ahora la definimos aquí para ser autocontenidos, idealmente debería estar en types.ts
@@ -21,7 +37,19 @@ interface ChatAreaProps {
     isLoading: boolean;
     hasSelectedConversation: boolean;
     isTyping?: boolean;
+    pilarId?: number | null;
+    onSuggestionClick?: (text: string) => void;
 }
+
+const PILAR_SUGGESTIONS: Record<number, string[]> = {
+    1: ["¿Cuál es el resumen ejecutivo del mes?", "Muéstrame los indicadores clave de todos los pilares", "Genera un informe de estado del ecosistema"],
+    2: ["¿Qué incidentes técnicos están abiertos?", "¿Cómo está el rendimiento del sistema esta semana?", "Dame un checklist de seguridad para revisar"],
+    3: ["¿Cuáles son mis metas de ventas este mes?", "Dame 5 técnicas de cierre para mi industria", "¿Cómo puedo mejorar mi tasa de conversión?"],
+    4: ["Ayúdame a redactar un post para redes sociales", "¿Qué tendencias de marketing aplican a mi negocio?", "Crea un plan de contenido para esta semana"],
+    5: ["¿Qué revisiones legales debo hacer este mes?", "Resume los cambios regulatorios recientes", "Dame un checklist de cumplimiento normativo"],
+    6: ["¿Cómo está el flujo de caja este mes?", "Explícame los gastos más significativos", "Dame un resumen financiero ejecutivo"],
+};
+
 
 // Helper para limpiar contenido visualmente
 const cleanContent = (text: string) => {
@@ -30,6 +58,32 @@ const cleanContent = (text: string) => {
     }
     return text;
 };
+
+// Botón de copiar para mensajes del bot
+function CopyButton({ text }: { text: string }) {
+    const [copied, setCopied] = useState(false);
+    const handleCopy = async () => {
+        try {
+            await navigator.clipboard.writeText(text);
+            setCopied(true);
+            setTimeout(() => setCopied(false), 1500);
+        } catch {}
+    };
+    return (
+        <button
+            onClick={handleCopy}
+            className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-md hover:bg-white/10 text-slate-500 hover:text-slate-300"
+            title="Copiar respuesta"
+        >
+            {copied
+                ? <Check className="w-3.5 h-3.5 text-[#00E599]" />
+                : <Copy className="w-3.5 h-3.5" />
+            }
+        </button>
+    );
+}
+
+
 
 // Componente para renderizar markdown en mensajes del bot
 function MarkdownMessage({ content }: { content: string }) {
@@ -102,6 +156,8 @@ export function ChatArea({
     isLoading,
     hasSelectedConversation,
     isTyping = false,
+    pilarId,
+    onSuggestionClick,
 }: ChatAreaProps) {
     const messagesEndRef = React.useRef<HTMLDivElement>(null);
     const containerRef = React.useRef<HTMLDivElement>(null);
@@ -134,7 +190,7 @@ export function ChatArea({
                     </p>
 
                     {/* Feature hints */}
-                    <div className="flex flex-wrap justify-center gap-3 mb-6">
+                    <div className="flex flex-wrap justify-center gap-3 mb-8">
                         {[
                             "📎 Adjuntar archivos",
                             "📷 Usar cámara",
@@ -146,6 +202,25 @@ export function ChatArea({
                             </span>
                         ))}
                     </div>
+
+                    {/* Sugerencias por pilar */}
+                    {pilarId && PILAR_SUGGESTIONS[pilarId] && onSuggestionClick && (
+                        <div className="w-full max-w-lg">
+                            <p className="text-xs text-slate-600 uppercase tracking-wider mb-3">Prueba preguntando...</p>
+                            <div className="flex flex-col gap-2">
+                                {PILAR_SUGGESTIONS[pilarId].map((suggestion) => (
+                                    <button
+                                        key={suggestion}
+                                        onClick={() => onSuggestionClick(suggestion)}
+                                        className="text-left px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-sm text-slate-300 hover:border-[#00E599]/40 hover:bg-[#00E599]/5 hover:text-white transition-all duration-200 group"
+                                    >
+                                        <span className="text-[#00E599] mr-2 group-hover:translate-x-0.5 inline-block transition-transform">›</span>
+                                        {suggestion}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    )}
                 </div>
             )}
 
@@ -249,10 +324,17 @@ export function ChatArea({
                                 </div>
                             )}
                         </div>
-                        <span className="text-[10px] text-slate-500 px-1 font-mono opacity-0 group-hover:opacity-100 transition-opacity">
-                            {msg.timestamp}
+
+                    {/* Footer del mensaje: timestamp + copiar */}
+                    <div className={`flex items-center gap-2 px-1 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                        <span className="text-[10px] text-slate-600 font-mono opacity-0 group-hover:opacity-100 transition-opacity">
+                            {formatMessageTime(msg.timestamp)}
                         </span>
+                        {msg.role === 'agent' && (
+                            <CopyButton text={cleanContent(msg.content)} />
+                        )}
                     </div>
+                </div>
                 </div>
             ))}
 

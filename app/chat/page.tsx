@@ -109,8 +109,10 @@ function ChatContent() {
   const {
     sendTextMessage: sendTextChatMessage,
     isLoading: isTextChatLoading,
+    isStreaming: textChatStreaming,
     streamingContent,
     error: textChatError,
+    stop: stopTextChat,
   } = useTextChat(
     // onMessageStart
     () => {
@@ -443,9 +445,9 @@ function ChatContent() {
   }, [selectedConversation?.id, clearVoiceMessages, clearDbMessages, loadConversations]);
 
   // Manejar envío unificado (Texto + Imágenes o Archivos de texto)
-  const handleSendMessage = async (files?: File[], textFile?: File | null) => {
+  const handleSendMessage = async (files?: File[], textFile?: File | null, overrideMessage?: string) => {
     // Validacion: necesitamos mensaje, iamgenes o archivo de texto
-    const hasMessage = message.trim().length > 0;
+    const hasMessage = (overrideMessage ?? message).trim().length > 0;
     const hasImages = files && files.length > 0;
     const hasTextFile = !!textFile;
 
@@ -465,8 +467,8 @@ function ChatContent() {
           const { readTextFile } = await import("@/app/_helpers/readTextFile");
           const { content, name } = await readTextFile(textFile);
           console.log(`Enviando archivo: ${name} (${content.length} chars)`);
-          addUserMessage(`[${name}] ${message.trim() || "Analiza este archivo"}`, true);
-          sendFileMessage(message.trim(), content, name);
+          addUserMessage(`[${name}] ${(overrideMessage ?? message).trim() || "Analiza este archivo"}`, true);
+          sendFileMessage((overrideMessage ?? message).trim(), content, name);
           setMessage("");
           return;
         } catch (error: any) {
@@ -487,8 +489,8 @@ function ChatContent() {
           const validUrls = urls.filter((url): url is string => url !== null);
           if (validUrls.length > 0) {
             console.log("✅ Imágenes subidas:", validUrls);
-            addUserMessage(message.trim(), true, validUrls);
-            sendMultimodalMessage(message.trim(), validUrls);
+            addUserMessage((overrideMessage ?? message).trim(), true, validUrls);
+            sendMultimodalMessage((overrideMessage ?? message).trim(), validUrls);
             setMessage("");
           } else {
             showToast("error", "Error al subir las imágenes.");
@@ -503,10 +505,10 @@ function ChatContent() {
 
       // PRIORIDAD 3: Solo texto (en llamada)
       if (hasMessage && sendTextMessage) {
-        const trimmedMessage = message.trim();
-        addUserMessage(trimmedMessage, true); // Mostrar en el chat local
-        sendTextMessage(trimmedMessage); // Enviar al bot
-        setMessage("");
+      const trimmedMessage = (overrideMessage ?? message).trim();
+      addUserMessage(trimmedMessage, true);
+      sendTextMessage(trimmedMessage);
+      setMessage("");
       }
       return;
     }
@@ -553,10 +555,10 @@ function ChatContent() {
       }
       // Mostrar mensaje del usuario INMEDIATAMENTE (como en modo VOZ)
       const displayMessage = hasTextFile
-        ? `${message.trim()} 📄 [${textFile!.name}]`
-        : message.trim() || "[Imagen]";
+        ? `${(overrideMessage ?? message).trim()} 📄 [${textFile!.name}]`
+        : (overrideMessage ?? message).trim() || "[Imagen]";
       addUserMessageFinal(displayMessage, imageUrls.length > 0 ? imageUrls : undefined);
-      const messageToSend = message.trim();
+      const messageToSend = (overrideMessage ?? message).trim();
       setMessage("");
 
       // Capturar frame de cámara si está disponible (para ver_camara)
@@ -580,7 +582,6 @@ function ChatContent() {
     }
   };
 
-  // Manejar el evento de presionar Enter
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
@@ -788,7 +789,11 @@ function ChatContent() {
           messages={allMessages}
           isLoading={isLoadingMessages}
           hasSelectedConversation={!!selectedConversation}
-          isTyping={textChatLoading}
+          isTyping={textChatLoading && !textChatStreaming}
+          pilarId={pilarId}
+          onSuggestionClick={(text) => {
+            handleSendMessage(undefined, undefined, text);
+          }}
         />
 
         {/* Input de mensajes */}
@@ -796,8 +801,9 @@ function ChatContent() {
           message={message}
           onMessageChange={setMessage}
           isUploading={isUploading || textChatLoading}
+          isStreaming={textChatStreaming}
           onSendMessage={handleSendMessage}
-          onKeyDown={handleKeyDown}
+          onStop={stopTextChat}
         />
         {/* Camera Preview */}
         <VideoPreview stream={localVideoStream} isCameraOn={isCameraOn} />

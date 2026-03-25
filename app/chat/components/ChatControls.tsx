@@ -1,7 +1,6 @@
 import React, { useRef, useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Paperclip, Send, X } from "lucide-react";
+import { Paperclip, Send, X, Square } from "lucide-react";
 import Image from "next/image";
 
 // Helper: icono y color por tipo de archivo
@@ -28,16 +27,18 @@ interface ChatControlsProps {
     message: string;
     onMessageChange: (value: string) => void;
     isUploading: boolean;
+    isStreaming?: boolean;
     onSendMessage: (files?: File[], textFile?: File | null) => void;
-    onKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => void;
+    onStop?: () => void;
 }
 
 export function ChatControls({
     message,
     onMessageChange,
     isUploading,
+    isStreaming = false,
     onSendMessage,
-    onKeyDown,
+    onStop,
 }: ChatControlsProps) {
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
@@ -80,18 +81,27 @@ export function ChatControls({
     };
 
     const handleSend = () => {
+        if (!message.trim() && selectedFiles.length === 0 && !selectedTextFile) return;
         onSendMessage(selectedFiles, selectedTextFile);
         setSelectedFiles([]);
         setSelectedTextFile(null);
     };
 
-    const handleKeyDownWrapper = (e: React.KeyboardEvent<HTMLInputElement>) => {
-        if (e.key === 'Enter' && (message.trim() || selectedFiles.length > 0)) {
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
             handleSend();
-        } else {
-            onKeyDown(e);
         }
     };
+
+    // Auto-grow textarea
+    const textareaRef = useRef<HTMLTextAreaElement>(null);
+    useEffect(() => {
+        const ta = textareaRef.current;
+        if (!ta) return;
+        ta.style.height = 'auto';
+        ta.style.height = Math.min(ta.scrollHeight, 160) + 'px';
+    }, [message]);
 
     return (
         <div className="shrink-0 sticky bottom-0 z-20 border-t border-white/5 bg-[#050B14]/95 backdrop-blur-md p-3 md:p-4 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
@@ -176,31 +186,47 @@ export function ChatControls({
                         <Paperclip className="w-5 h-5" />
                     </Button>
 
-                    {/* Input de texto */}
+                    {/* Textarea autoexpandible */}
                     <div className="flex-1 relative">
-                        <Input
-                            placeholder={selectedFiles.length > 0 ? "Añade una descripción..." : "Escribe para chatear..."}
+                        <textarea
+                            ref={textareaRef}
+                            rows={1}
+                            placeholder={selectedFiles.length > 0 ? "Añade una descripción... (Enter para enviar, Shift+Enter para nueva línea)" : "Escribe para chatear... (Shift+Enter para nueva línea)"}
                             value={message}
                             onChange={(e) => onMessageChange(e.target.value)}
-                            onKeyDown={handleKeyDownWrapper}
-                            className="h-11 md:h-12 text-sm md:text-base bg-black/20 border-white/10 focus:border-[#00E599]/50 focus:ring-[#00E599]/20 text-slate-200 placeholder:text-slate-500 rounded-xl"
+                            onKeyDown={handleKeyDown}
+                            disabled={isStreaming}
+                            className="w-full resize-none bg-black/20 border border-white/10 focus:border-[#00E599]/50 focus:ring-2 focus:ring-[#00E599]/20 text-slate-200 placeholder:text-slate-500 rounded-xl px-4 py-3 text-sm md:text-base outline-none transition-all min-h-[44px] max-h-[160px] overflow-y-auto custom-scrollbar leading-relaxed disabled:opacity-50 disabled:cursor-not-allowed"
+                            style={{ height: '44px' }}
                         />
                     </div>
 
-                    {/* Botón de enviar */}
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        aria-label="Enviar mensaje"
-                        className={`shrink-0 h-11 w-11 md:h-12 md:w-12 rounded-xl transition-all duration-300 ${(!message.trim() && selectedFiles.length === 0 && !selectedTextFile)
-                            ? "bg-white/5 text-slate-600 cursor-not-allowed"
-                            : "bg-[#00E599] text-slate-900 hover:bg-[#00E599]/90 hover:scale-105 shadow-[0_0_15px_rgba(0,229,153,0.3)]"
-                            }`}
-                        disabled={(!message.trim() && selectedFiles.length === 0 && !selectedTextFile)}
-                        onClick={handleSend}
-                    >
-                        <Send className="w-5 h-5" />
-                    </Button>
+                    {/* Botón Detener o Enviar */}
+                    {isStreaming ? (
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            aria-label="Detener generación"
+                            className="shrink-0 h-11 w-11 md:h-12 md:w-12 rounded-xl bg-red-500/20 border border-red-500/40 text-red-400 hover:bg-red-500/30 transition-all"
+                            onClick={onStop}
+                        >
+                            <Square className="w-4 h-4 fill-current" />
+                        </Button>
+                    ) : (
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            aria-label="Enviar mensaje"
+                            className={`shrink-0 h-11 w-11 md:h-12 md:w-12 rounded-xl transition-all duration-300 ${(!message.trim() && selectedFiles.length === 0 && !selectedTextFile)
+                                ? "bg-white/5 text-slate-600 cursor-not-allowed"
+                                : "bg-[#00E599] text-slate-900 hover:bg-[#00E599]/90 hover:scale-105 shadow-[0_0_15px_rgba(0,229,153,0.3)]"
+                                }`}
+                            disabled={(!message.trim() && selectedFiles.length === 0 && !selectedTextFile)}
+                            onClick={handleSend}
+                        >
+                            <Send className="w-5 h-5" />
+                        </Button>
+                    )}
                 </div>
             </div>
         </div>
