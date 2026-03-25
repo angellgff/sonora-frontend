@@ -22,6 +22,23 @@ export async function saveMessage(message: Message) {
   }
 }
 
+export async function softDeleteMessage(messageId: string) {
+  try {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!;
+    const supabase = createSupabaseClient(supabaseUrl, supabaseKey);
+    const { error } = await supabase
+      .from("messages")
+      .update({ deleted_at: new Date().toISOString() })
+      .eq("id", messageId);
+    if (error) throw new Error(error.message);
+    console.log(`🗑️ Mensaje ${messageId} soft-deleted`);
+  } catch (error) {
+    console.error("Error soft-deleting message:", error);
+    throw new Error("Failed to soft-delete message");
+  }
+}
+
 export async function getMessages(conversation_id: string) {
   try {
     const supabase = await createClient();

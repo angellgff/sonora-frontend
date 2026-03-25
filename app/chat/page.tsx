@@ -24,7 +24,7 @@ import type { TranscriptData, BotLLMTextData } from "@pipecat-ai/client-js";
 import { useConversation } from "@/hooks/useConversation";
 import type { Conversation } from "@/app/actions/conversations/types";
 import { serializeMessagesToUI } from "@/app/actions/messages/serializers";
-import { deleteConversation } from "@/app/actions/conversations/conversations";
+import { deleteConversation, updateConversation } from "@/app/actions/conversations/conversations";
 import { createBrowserClient } from "@supabase/ssr";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense } from "react";
@@ -139,6 +139,7 @@ function ChatContent() {
     addUserMessageFinal,
     addBotMessage,
     addBotMessageFinal,
+    removeLastBotMessage,
     startBotSpeaking,
     stopBotSpeaking,
     clearMessages: clearVoiceMessages,
@@ -616,6 +617,18 @@ function ChatContent() {
         onCreate={handleCreateNewConversation}
         onLogout={handleLogout}
         deletingId={deletingConversationId}
+        onRename={async (id, newTitle) => {
+          try {
+            await updateConversation({ id, title: newTitle } as Conversation);
+            // Actualizar en la UI inmediatamente
+            if (selectedConversation?.id === id) {
+              setSelectedConversation((prev) => prev ? { ...prev, title: newTitle } : prev);
+            }
+            await loadConversations();
+          } catch (err) {
+            console.error("Error renombrando:", err);
+          }
+        }}
       />
 
       {/* Área principal del chat */}
@@ -793,6 +806,12 @@ function ChatContent() {
           pilarId={pilarId}
           onSuggestionClick={(text) => {
             handleSendMessage(undefined, undefined, text);
+          }}
+          onRegenerate={() => {
+            const lastUserMsg = [...allMessages].reverse().find(m => m.role === 'user');
+            if (!lastUserMsg || !selectedConversation?.id) return;
+            // Simplemente re-enviar el mensaje como uno nuevo (ambas respuestas se conservan)
+            handleSendMessage(undefined, undefined, lastUserMsg.content.trim());
           }}
         />
 

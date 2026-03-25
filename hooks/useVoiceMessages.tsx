@@ -198,6 +198,16 @@ export function useVoiceMessages() {
     }
   }, [finalizeBotMessage]);
 
+  // Eliminar el último mensaje del bot (para regenerar)
+  const removeLastBotMessage = useCallback(() => {
+    setMessages((prev) => {
+      const lastBotIdx = [...prev].reverse().findIndex(m => m.role === "agent");
+      if (lastBotIdx === -1) return prev;
+      const idx = prev.length - 1 - lastBotIdx;
+      return [...prev.slice(0, idx), ...prev.slice(idx + 1)];
+    });
+  }, []);
+
   // Limpiar todos los mensajes
   const clearMessages = useCallback(() => {
     setMessages([]);
@@ -252,6 +262,7 @@ export function useVoiceMessages() {
     addUserMessageFinal,
     addBotMessage,
     addBotMessageFinal,
+    removeLastBotMessage,
     startBotSpeaking,
     stopBotSpeaking,
     clearMessages,

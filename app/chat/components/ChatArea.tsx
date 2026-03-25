@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import ReactMarkdown from "react-markdown";
 import { Card } from "@/components/ui/card";
 import { ChatMessagesSkeleton } from "@/components/ui/skeleton";
-import { MessageSquare, Bot, User, Copy, Check } from "lucide-react";
+import { MessageSquare, Bot, User, Copy, Check, RefreshCw, X } from "lucide-react";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 import "dayjs/locale/es";
@@ -12,6 +12,8 @@ dayjs.locale("es");
 
 function formatMessageTime(timestamp: string): string {
     const d = dayjs(timestamp);
+    if (!d.isValid()) return timestamp; // Ya viene formateado por el serializer (ej. "17:23")
+    
     const now = dayjs();
     if (now.diff(d, 'minute') < 1) return 'ahora';
     if (now.diff(d, 'hour') < 1) return d.fromNow();
@@ -39,6 +41,7 @@ interface ChatAreaProps {
     isTyping?: boolean;
     pilarId?: number | null;
     onSuggestionClick?: (text: string) => void;
+    onRegenerate?: () => void;
 }
 
 const PILAR_SUGGESTIONS: Record<number, string[]> = {
@@ -53,10 +56,16 @@ const PILAR_SUGGESTIONS: Record<number, string[]> = {
 
 // Helper para limpiar contenido visualmente
 const cleanContent = (text: string) => {
-    if (text.includes("[CONTENIDO DE ARCHIVOS]:")) {
-        return text.split("[CONTENIDO DE ARCHIVOS]:")[0].trim();
+    let clean = text;
+    // Limpiar contenido de archivos RAG
+    if (clean.includes("[CONTENIDO DE ARCHIVOS]:")) {
+        clean = clean.split("[CONTENIDO DE ARCHIVOS]:")[0].trim();
     }
-    return text;
+    // Limpiar sufijo de adjuntos (para que no salga "📄 Adjuntos: [img.jpg]" en la UI)
+    if (clean.includes("📄 Adjuntos:")) {
+        clean = clean.split("📄 Adjuntos:")[0].trim();
+    }
+    return clean;
 };
 
 // Botón de copiar para mensajes del bot
@@ -158,9 +167,11 @@ export function ChatArea({
     isTyping = false,
     pilarId,
     onSuggestionClick,
+    onRegenerate,
 }: ChatAreaProps) {
     const messagesEndRef = React.useRef<HTMLDivElement>(null);
     const containerRef = React.useRef<HTMLDivElement>(null);
+    const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
 
     // Auto-scroll: only if user is near the bottom (not scrolled up reading)
     React.useEffect(() => {
@@ -175,6 +186,7 @@ export function ChatArea({
     }, [messages, isTyping]);
 
     return (
+        <>
         <div ref={containerRef} className="flex-1 min-h-0 overflow-y-auto p-3 md:p-4 space-y-4 md:space-y-6 custom-scrollbar">
             {/* Estado vacío: sin conversación seleccionada */}
             {!hasSelectedConversation && messages.length === 0 && (
@@ -271,7 +283,7 @@ export function ChatArea({
                                     {msg.images && msg.images.length > 0 && (
                                         <div className="flex gap-2 mt-2 flex-wrap">
                                             {msg.images.map((img, idx) => (
-                                                <div key={idx} className="relative w-32 h-32 md:w-48 md:h-48 rounded-xl overflow-hidden border border-black/10 shadow-sm cursor-zoom-in">
+                                                <div key={idx} className={`relative w-32 h-32 md:w-48 md:h-48 rounded-xl overflow-hidden shadow-sm cursor-zoom-in border ${msg.role === 'user' ? 'border-white/30' : 'border-white/10'}`} onClick={() => setLightboxSrc(img)}>
                                                     {/* eslint-disable-next-line @next/next/no-img-element */}
                                                     <img
                                                         src={img}
@@ -301,16 +313,19 @@ export function ChatArea({
                                     {msg.role === "agent" ? (
                                         <MarkdownMessage content={cleanContent(msg.content)} />
                                     ) : (
-                                        <p className="text-sm md:text-base leading-relaxed wrap-break-word font-medium">
-                                            {cleanContent(msg.content)}
-                                        </p>
+                                        /* Ocultar "[Imagen]" cuando hay imágenes reales */
+                                        cleanContent(msg.content) !== "[Imagen]" || !(msg.images && msg.images.length > 0) ? (
+                                            <p className="text-sm md:text-base leading-relaxed wrap-break-word font-medium">
+                                                {cleanContent(msg.content)}
+                                            </p>
+                                        ) : null
                                     )}
 
                                     {/* Renderizar Imagenes si existen (Text Msg) */}
                                     {msg.images && msg.images.length > 0 && (
                                         <div className="flex gap-2 mt-2 flex-wrap">
                                             {msg.images.map((img, idx) => (
-                                                <div key={idx} className="relative w-32 h-32 md:w-48 md:h-48 rounded-xl overflow-hidden border border-black/10 shadow-sm">
+                                                <div key={idx} className={`relative w-32 h-32 md:w-48 md:h-48 rounded-xl overflow-hidden shadow-sm cursor-zoom-in border ${msg.role === 'user' ? 'border-white/30' : 'border-white/10'}`} onClick={() => setLightboxSrc(img)}>
                                                     {/* eslint-disable-next-line @next/next/no-img-element */}
                                                     <img
                                                         src={img}
@@ -325,13 +340,29 @@ export function ChatArea({
                             )}
                         </div>
 
-                    {/* Footer del mensaje: timestamp + copiar */}
+                    {/* Footer del mensaje: timestamp + copiar + regenerar */}
                     <div className={`flex items-center gap-2 px-1 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                         <span className="text-[10px] text-slate-600 font-mono opacity-0 group-hover:opacity-100 transition-opacity">
                             {formatMessageTime(msg.timestamp)}
                         </span>
                         {msg.role === 'agent' && (
                             <CopyButton text={cleanContent(msg.content)} />
+                        )}
+                        {/* Botón regenerar: solo en el último mensaje del bot, cuando no está escribiendo */}
+                        {msg.role === 'agent' && !isTyping && onRegenerate && (
+                            (() => {
+                                const lastBotIdx = messages.length - 1 - [...messages].reverse().findIndex(m => m.role === 'agent');
+                                return lastBotIdx === messages.indexOf(msg) ? (
+                                    <button
+                                        onClick={onRegenerate}
+                                        className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-md hover:bg-white/10 text-slate-500 hover:text-slate-300 flex items-center gap-1"
+                                        title="Regenerar respuesta"
+                                    >
+                                        <RefreshCw className="w-3.5 h-3.5" />
+                                        <span className="text-[10px]">Regenerar</span>
+                                    </button>
+                                ) : null;
+                            })()
                         )}
                     </div>
                 </div>
@@ -375,5 +406,32 @@ export function ChatArea({
                 }
             `}</style>
         </div>
+
+        {/* Lightbox modal para ver imágenes en pantalla completa */}
+        {lightboxSrc && (
+            <div
+                className="fixed inset-0 z-[100] flex items-center justify-center bg-black/85 backdrop-blur-sm animate-in fade-in duration-200"
+                onClick={() => setLightboxSrc(null)}
+                onKeyDown={(e) => { if (e.key === 'Escape') setLightboxSrc(null); }}
+                tabIndex={0}
+                ref={(el) => el?.focus()}
+            >
+                <button
+                    onClick={(e) => { e.stopPropagation(); setLightboxSrc(null); }}
+                    className="absolute top-4 right-4 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors z-10"
+                    title="Cerrar"
+                >
+                    <X className="w-6 h-6" />
+                </button>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                    src={lightboxSrc}
+                    alt="Vista completa"
+                    className="max-w-[90vw] max-h-[90vh] object-contain rounded-xl shadow-2xl"
+                    onClick={(e) => e.stopPropagation()}
+                />
+            </div>
+        )}
+        </>
     );
 }

@@ -3,7 +3,7 @@
 import { useState, useCallback, useRef } from "react";
 
 interface UseTextChatReturn {
-    sendTextMessage: (message: string, conversationId: string, userId: string | null, files?: File[], imageUrls?: string[], cameraImage?: string, pilarId?: number | null, agentId?: string | null) => Promise<void>;
+    sendTextMessage: (message: string, conversationId: string, userId: string | null, files?: File[], imageUrls?: string[], cameraImage?: string, pilarId?: number | null, agentId?: string | null, regenerate?: boolean) => Promise<void>;
     isLoading: boolean;
     isStreaming: boolean;
     streamingContent: string;
@@ -27,7 +27,7 @@ export function useTextChat(
     }, []);
 
     const sendTextMessage = useCallback(
-        async (message: string, conversationId: string, userId: string | null, files?: File[], imageUrls?: string[], cameraImage?: string, pilarId?: number | null, agentId?: string | null) => {
+        async (message: string, conversationId: string, userId: string | null, files?: File[], imageUrls?: string[], cameraImage?: string, pilarId?: number | null, agentId?: string | null, regenerate?: boolean) => {
             if ((!message.trim() && !(files && files.length > 0)) || !conversationId) return;
 
             const controller = new AbortController();
@@ -59,7 +59,7 @@ export function useTextChat(
                     response = await fetch("/api/chat", {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ message, conversationId, userId, cameraImage, pilarId, agentId }),
+                        body: JSON.stringify({ message, conversationId, userId, cameraImage, pilarId, agentId, regenerate: !!regenerate }),
                         signal: controller.signal,
                     });
                 }
