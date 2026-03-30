@@ -407,12 +407,16 @@ function ChatContent() {
   const handleConversationClick = React.useCallback(async (conversation: Conversation) => {
     console.log("📖 Seleccionando conversación:", conversation.id);
 
+    // Abortar cualquier chat pendiente para limpiar el estado de "pensando..."
+    stopTextChat();
+    setTextChatLoading(false);
+
     setSelectedConversation(conversation);
-    setTitleGenerated(false); // Resetear el flag cuando se selecciona una conversación
+    setTitleGenerated(false);
 
     // Limpiar mensajes anteriores antes de cargar la nueva conversación
-    clearVoiceMessages(); // Limpiar mensajes de voz en tiempo real
-    clearDbMessages(); // Limpiar mensajes de BD de la conversación anterior
+    clearVoiceMessages();
+    clearDbMessages();
 
     if (conversation.id) {
       loadMessages(conversation.id);
@@ -420,7 +424,7 @@ function ChatContent() {
 
     // Cerrar sidebar en móvil después de seleccionar
     setSidebarOpen(false);
-  }, [clearVoiceMessages, clearDbMessages, loadMessages]);
+  }, [clearVoiceMessages, clearDbMessages, loadMessages, stopTextChat]);
 
   // Manejar eliminacion de conversacion
   const handleDeleteConversation = React.useCallback(async (conversationId: string, e: React.MouseEvent) => {
