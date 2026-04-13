@@ -37,6 +37,36 @@ interface DashboardData {
     pilarUserCounts: Record<number, number>;
 }
 
+interface TuGuiaMetrics {
+    totalProfiles: number;
+    subscriptions: {
+        active: number;
+        inactive: number;
+    };
+    accountTypes: {
+        personal: number;
+        business: number;
+    };
+    verification: {
+        verified: number;
+        notVerified: number;
+    };
+    signups: {
+        last7d: number;
+        last30d: number;
+    };
+    totalServices: number;
+    topProvinces: Array<{
+        province: string;
+        count: number;
+    }>;
+    adheridos: {
+        total: number;
+        porRubro: Array<{ rubro: string; count: number }>;
+        porProvincia: Array<{ provincia: string; count: number }>;
+    };
+}
+
 const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string; border: string; glow: string; dot: string }> = {
     verde: { label: "Operativo", color: "text-emerald-400", bg: "bg-emerald-500/10", border: "border-emerald-500/30", glow: "shadow-[0_0_20px_rgba(16,185,129,0.15)]", dot: "bg-emerald-400" },
     amarillo: { label: "Atención", color: "text-yellow-400", bg: "bg-yellow-500/10", border: "border-yellow-500/30", glow: "shadow-[0_0_20px_rgba(234,179,8,0.15)]", dot: "bg-yellow-400" },
@@ -60,6 +90,7 @@ function getHealthColor(score: number) {
 
 export default function TableroFundador() {
     const [data, setData] = useState<DashboardData | null>(null);
+    const [tuGuiaMetrics, setTuGuiaMetrics] = useState<TuGuiaMetrics | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
 
@@ -67,10 +98,19 @@ export default function TableroFundador() {
         setLoading(true);
         setError("");
         try {
-            const res = await fetch("/api/admin/tablero");
-            if (!res.ok) throw new Error("Error cargando datos del tablero");
-            const json = await res.json();
-            setData(json);
+            const [tableroRes, tuguiaRes] = await Promise.all([
+                fetch("/api/admin/tablero"),
+                fetch("/api/admin/tuguia-metrics"),
+            ]);
+
+            if (!tableroRes.ok) throw new Error("Error cargando datos del tablero");
+            if (!tuguiaRes.ok) throw new Error("Error cargando métricas de Tu Guía");
+
+            const tableroJson = await tableroRes.json();
+            const tuguiaJson = await tuguiaRes.json();
+
+            setData(tableroJson);
+            setTuGuiaMetrics(tuguiaJson);
         } catch (e: any) {
             setError(e.message);
         } finally {
@@ -287,6 +327,151 @@ export default function TableroFundador() {
                             </div>
                         </div>
 
+                        {tuGuiaMetrics && (
+                            <div>
+                                <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
+                                    <Users className="w-5 h-5 text-[#00E599]" />
+                                    Tu Guía Argentina
+                                </h2>
+                                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
+                                    <StatCard
+                                        icon={<Users className="w-5 h-5" />}
+                                        label="Perfiles"
+                                        value={tuGuiaMetrics.totalProfiles}
+                                        color="text-sky-400"
+                                        bg="bg-sky-500/10"
+                                        border="border-sky-500/20"
+                                    />
+                                    <StatCard
+                                        icon={<TrendingUp className="w-5 h-5" />}
+                                        label="Altas 7D"
+                                        value={tuGuiaMetrics.signups.last7d}
+                                        color="text-violet-400"
+                                        bg="bg-violet-500/10"
+                                        border="border-violet-500/20"
+                                    />
+                                    <StatCard
+                                        icon={<TrendingUp className="w-5 h-5" />}
+                                        label="Altas 30D"
+                                        value={tuGuiaMetrics.signups.last30d}
+                                        color="text-indigo-400"
+                                        bg="bg-indigo-500/10"
+                                        border="border-indigo-500/20"
+                                    />
+                                    <StatCard
+                                        icon={<Shield className="w-5 h-5" />}
+                                        label="Verificados"
+                                        value={tuGuiaMetrics.verification.verified}
+                                        color="text-emerald-400"
+                                        bg="bg-emerald-500/10"
+                                        border="border-emerald-500/20"
+                                    />
+                                    <StatCard
+                                        icon={<Users className="w-5 h-5" />}
+                                        label="Suscripciones Activas"
+                                        value={tuGuiaMetrics.subscriptions.active}
+                                        color="text-amber-400"
+                                        bg="bg-amber-500/10"
+                                        border="border-amber-500/20"
+                                    />
+                                    <StatCard
+                                        icon={<BookOpen className="w-5 h-5" />}
+                                        label="Servicios"
+                                        value={tuGuiaMetrics.totalServices}
+                                        color="text-cyan-400"
+                                        bg="bg-cyan-500/10"
+                                        border="border-cyan-500/20"
+                                    />
+                                </div>
+
+                                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                                    <div className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl p-6">
+                                        <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-4">Distribución de cuentas</h3>
+                                        <div className="space-y-4">
+                                            <MetricRow label="Personales" value={tuGuiaMetrics.accountTypes.personal} total={tuGuiaMetrics.totalProfiles} color="bg-sky-400" />
+                                            <MetricRow label="Business" value={tuGuiaMetrics.accountTypes.business} total={tuGuiaMetrics.totalProfiles} color="bg-violet-400" />
+                                            <MetricRow label="No verificados" value={tuGuiaMetrics.verification.notVerified} total={tuGuiaMetrics.totalProfiles} color="bg-amber-400" />
+                                            <MetricRow label="Suscripciones inactivas" value={tuGuiaMetrics.subscriptions.inactive} total={tuGuiaMetrics.totalProfiles} color="bg-rose-400" />
+                                        </div>
+                                    </div>
+
+                                    <div className="lg:col-span-2 rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl p-6">
+                                        <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-4">Top provincias</h3>
+                                        <div className="space-y-3">
+                                            {tuGuiaMetrics.topProvinces.map((item) => (
+                                                <div key={item.province} className="flex items-center gap-3">
+                                                    <div className="w-40 text-sm text-white truncate">{item.province}</div>
+                                                    <div className="flex-1 h-2 bg-white/5 rounded-full overflow-hidden">
+                                                        <div
+                                                            className="h-full bg-[#00E599] rounded-full"
+                                                            style={{ width: `${tuGuiaMetrics.topProvinces[0]?.count ? (item.count / tuGuiaMetrics.topProvinces[0].count) * 100 : 0}%` }}
+                                                        />
+                                                    </div>
+                                                    <div className="w-10 text-right text-sm text-slate-300 font-semibold">{item.count}</div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* === ROW: Adheridos por Rubro y Provincia === */}
+                        {tuGuiaMetrics?.adheridos && (
+                            <div>
+                                <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
+                                    <Shield className="w-5 h-5 text-[#00E599]" />
+                                    Adheridos Tu Guía
+                                    <span className="text-sm font-normal text-slate-400 ml-2">({tuGuiaMetrics.adheridos.total} miembros)</span>
+                                </h2>
+                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                    {/* Por Rubro */}
+                                    <div className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl p-6">
+                                        <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-4">Por Rubro</h3>
+                                        <div className="space-y-3">
+                                            {tuGuiaMetrics.adheridos.porRubro.length === 0 && (
+                                                <p className="text-sm text-slate-500">Sin datos de rubros</p>
+                                            )}
+                                            {tuGuiaMetrics.adheridos.porRubro.map((item) => (
+                                                <div key={item.rubro} className="flex items-center gap-3">
+                                                    <div className="w-44 text-sm text-white truncate" title={item.rubro}>{item.rubro}</div>
+                                                    <div className="flex-1 h-2 bg-white/5 rounded-full overflow-hidden">
+                                                        <div
+                                                            className="h-full bg-violet-400 rounded-full"
+                                                            style={{ width: `${tuGuiaMetrics.adheridos.porRubro[0]?.count ? (item.count / tuGuiaMetrics.adheridos.porRubro[0].count) * 100 : 0}%` }}
+                                                        />
+                                                    </div>
+                                                    <div className="w-8 text-right text-sm text-slate-300 font-semibold">{item.count}</div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    {/* Por Provincia */}
+                                    <div className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl p-6">
+                                        <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-4">Por Provincia</h3>
+                                        <div className="space-y-3">
+                                            {tuGuiaMetrics.adheridos.porProvincia.length === 0 && (
+                                                <p className="text-sm text-slate-500">Sin datos de provincias</p>
+                                            )}
+                                            {tuGuiaMetrics.adheridos.porProvincia.map((item) => (
+                                                <div key={item.provincia} className="flex items-center gap-3">
+                                                    <div className="w-44 text-sm text-white truncate" title={item.provincia}>{item.provincia}</div>
+                                                    <div className="flex-1 h-2 bg-white/5 rounded-full overflow-hidden">
+                                                        <div
+                                                            className="h-full bg-[#00E599] rounded-full"
+                                                            style={{ width: `${tuGuiaMetrics.adheridos.porProvincia[0]?.count ? (item.count / tuGuiaMetrics.adheridos.porProvincia[0].count) * 100 : 0}%` }}
+                                                        />
+                                                    </div>
+                                                    <div className="w-8 text-right text-sm text-slate-300 font-semibold">{item.count}</div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
                         {/* === ROW 4: Future Financial Indicators (Placeholders) === */}
                         <div>
                             <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
@@ -335,6 +520,22 @@ function StatCard({ icon, label, value, color, bg, border }: {
             </div>
             <p className="text-xs text-slate-500 uppercase tracking-wider font-semibold mb-1">{label}</p>
             <p className={`text-2xl font-bold text-white`}>{value}</p>
+        </div>
+    );
+}
+
+function MetricRow({ label, value, total, color }: { label: string; value: number; total: number; color: string }) {
+    const width = total > 0 ? (value / total) * 100 : 0;
+
+    return (
+        <div>
+            <div className="flex items-center justify-between mb-1">
+                <span className="text-sm text-slate-300">{label}</span>
+                <span className="text-sm font-semibold text-white">{value}</span>
+            </div>
+            <div className="h-2 bg-white/5 rounded-full overflow-hidden">
+                <div className={`h-full rounded-full ${color}`} style={{ width: `${width}%` }} />
+            </div>
         </div>
     );
 }
