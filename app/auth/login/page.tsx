@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { createBrowserClient } from "@supabase/ssr";
 import { useRouter } from "next/navigation"
-import Link from "next/link";
 import { Bot } from "lucide-react";
 
 export const dynamic = 'force-dynamic';
@@ -124,16 +123,6 @@ export default function LoginPage() {
               </button>
             </div>
           </form>
-
-          <p className="mt-8 text-center text-sm text-slate-400">
-            ¿No tienes una cuenta?{" "}
-            <Link
-              href="/auth/sign-up"
-              className="font-medium text-[#00E599] hover:text-[#00E599]/80 hover:underline transition-all"
-            >
-              Solicitar acceso
-            </Link>
-          </p>
         </div>
       </div>
     </div>
